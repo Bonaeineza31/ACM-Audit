@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './App.css';
 import AssessmentForm from './components/AssessmentForm';
 import AssessmentList from './components/AssessmentList';
+import acmobilityLogo from './assets/acmobility_full.png';
 
 function App() {
   // view state: 'landing', 'auditForm', 'viewData'
@@ -52,10 +53,8 @@ function App() {
     <div className="app-container">
       <header className="app-header">
         <div className="logo-container">
-          {/* Logo implementation: If the user saves the image to src/assets, this will load it */}
-          {/* We're using an img tag with an error fallback to the text logo if the image isn't found yet */}
           <img 
-            src="/src/assets/acmobility_full.png" 
+            src={acmobilityLogo} 
             alt="AC Mobility Logo" 
             className="brand-logo"
             onError={(e) => {
