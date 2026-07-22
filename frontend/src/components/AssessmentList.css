@@ -1,0 +1,93 @@
+.list-view {
+  padding: 2rem;
+  min-height: 500px;
+  display: flex;
+  flex-direction: column;
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.table-responsive {
+  overflow-x: auto;
+  flex: 1;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th {
+  padding: 1rem;
+  background: rgba(24, 69, 157, 0.05); /* very light brand blue */
+  color: var(--acm-blue);
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: top;
+}
+
+.data-table tr:hover td {
+  background: rgba(0, 165, 223, 0.03);
+}
+
+.text-muted {
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.badge.excellent { background: rgba(16, 185, 129, 0.1); color: #059669; border-color: #059669; }
+.badge.good { background: rgba(59, 130, 246, 0.1); color: #2563eb; border-color: #2563eb; }
+.badge.fair { background: rgba(245, 158, 11, 0.1); color: #d97706; border-color: #d97706; }
+.badge.poor { background: rgba(239, 68, 68, 0.1); color: #dc2626; border-color: #dc2626; }
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.page-info {
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.no-data {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 3rem;
+  font-style: italic;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 4rem;
+  color: var(--acm-blue);
+  font-weight: 600;
+  font-size: 1.2rem;
+}
