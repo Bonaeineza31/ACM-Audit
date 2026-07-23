@@ -19,15 +19,11 @@ const AssessmentList = ({ onViewDetail }) => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('adminToken');
       const res = await fetch('/api/assessments', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        credentials: 'include'
       });
       if (res.status === 401 || res.status === 403) {
         // Token expired or invalid
-        localStorage.removeItem('adminToken');
         window.location.reload();
         return;
       }

@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
 
@@ -12,8 +13,12 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Vite default port
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // API Routes
 app.use('/api/assessments', assessmentRoutes);

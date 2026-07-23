@@ -24,9 +24,25 @@
   gap: 1.5rem;
 }
 
+.login-form input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+}
+
+.login-form input:focus {
+  border-color: var(--acm-blue);
+  box-shadow: 0 0 0 2px rgba(24, 69, 157, 0.1);
+}
+
 .login-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 1rem;
   margin-top: 1rem;
 }

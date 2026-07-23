@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import './App.css';
 import AssessmentForm from './components/AssessmentForm';
 import AssessmentList from './components/AssessmentList';
@@ -10,20 +10,79 @@ function App() {
   // view state: 'landing', 'auditForm', 'viewData'
   const [currentView, setCurrentView] = useState('landing');
   const [selectedAssessment, setSelectedAssessment] = useState(null);
-  const [authToken, setAuthToken] = useState(localStorage.getItem('adminToken'));
+  const [authToken, setAuthToken] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [authError, setAuthError] = useState('');
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const email = urlParams.get('email');
+
+    if (token && email) {
+      verifyMagicLink(token, email);
+    }
+  }, []);
+
+  const verifyMagicLink = async (token, email) => {
+    setVerifying(true);
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, email })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAuthToken(true);
+        setCurrentView('viewData');
+        // Clean URL
+        window.history.replaceState({}, document.title, '/');
+      } else {
+        setAuthError(data.error || 'Invalid or expired link.');
+      }
+    } catch (err) {
+      setAuthError('Connection error.');
+    } finally {
+      setVerifying(false);
+    }
+  };
 
   const handleNavigate = (view) => {
     setCurrentView(view);
     setSelectedAssessment(null);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    setAuthToken(null);
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch(e) {}
+    setAuthToken(false);
     handleNavigate('landing');
   };
 
   const renderContent = () => {
+    if (verifying) {
+      return (
+        <div className="glass-container text-center p-5 animate-fade-in">
+          <h2>Authenticating...</h2>
+          <p>Please wait while we verify your magic link.</p>
+        </div>
+      );
+    }
+
+    if (authError) {
+      return (
+        <div className="glass-container text-center p-5 animate-fade-in">
+          <h2>Authentication Failed</h2>
+          <p className="alert error">{authError}</p>
+          <button className="btn btn-primary mt-3" onClick={() => { setAuthError(''); handleNavigate('landing'); }}>
+            Return to Home
+          </button>
+        </div>
+      );
+    }
+
     switch (currentView) {
       case 'auditForm':
         return (
@@ -37,13 +96,7 @@ function App() {
       case 'viewData':
         if (!authToken) {
           return (
-            <Login 
-              onLoginSuccess={(token) => {
-                localStorage.setItem('adminToken', token);
-                setAuthToken(token);
-              }} 
-              onCancel={() => handleNavigate('landing')} 
-            />
+            <Login onCancel={() => handleNavigate('landing')} />
           );
         }
 

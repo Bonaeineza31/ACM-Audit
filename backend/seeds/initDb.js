@@ -120,6 +120,26 @@ const initDb = async () => {
         overall_satisfaction INT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email VARCHAR(255) UNIQUE NOT NULL,
+        role VARCHAR(50) NOT NULL DEFAULT 'Viewer',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS magic_links (
+        id SERIAL PRIMARY KEY,
+        user_id INT REFERENCES users(id) ON DELETE CASCADE,
+        token_hash VARCHAR(255) NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      INSERT INTO users (email, role) 
+      VALUES ('bonae@acgroup.rw', 'Viewer') 
+      ON CONFLICT (email) DO NOTHING;
     `);
     console.log('Database tables initialized successfully');
   } catch (err) {
