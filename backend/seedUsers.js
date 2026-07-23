@@ -18,7 +18,7 @@ const emails = [
   'shumbusho.emile@acgroup.rw', 'shyaka.honore@acgroup.rw', 'sibomana.mubarack@acgroup.rw', 'tuyizere.gaston@acgroup.rw',
   'steven@acgroup.rw', 'eurempie@acgroup.rw', 'umuhoza.vanessa@acgroup.rw', 'umunyanapauline@acgroup.rw',
   'urayenezalourence7@gmail.com', 'uwimbabazi@acgroup.rw', 'bildad.wafula@acgroup.rw', 'fidelite@acgroup.rw',
-  'marlene@acgroup.rw', 'bonae@acgroup.rw', 'yvonne@acgroup.rw', 'irene@acgroup.rw'
+  'marlene@acgroup.rw', 'bonae@acgroup.rw', 'yvonne@acgroup.rw', 'irene@acgroup.rw', 'b.ineza@alustudent.com'
 ];
 
 async function seed() {

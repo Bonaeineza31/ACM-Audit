@@ -3,19 +3,10 @@ const router = express.Router();
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 import rateLimit from 'express-rate-limit';
 
-// Set up email transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: process.env.SMTP_PORT || 465,
-  secure: true, // true for 465, false for other ports
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS
-  }
-});
+const resend = new Resend(process.env.RESEND_API_KEY || 're_Gwq1LMrd_L27HeuRH3xWbdqJwDKdw5hBa');
 
 // Rate limiting for Magic Links (max 5 requests per hour per IP)
 const magicLinkLimiter = rateLimit({
@@ -27,7 +18,7 @@ const magicLinkLimiter = rateLimit({
 router.post('/magic-link', magicLinkLimiter, async (req, res) => {
   const { email } = req.body;
 
-  if (!email || (!email.endsWith('@acgroup.rw') && !email.endsWith('@acmobility.com'))) {
+  if (!email || (!email.endsWith('@acgroup.rw') && !email.endsWith('@acmobility.com') && email !== 'b.ineza@alustudent.com')) {
     return res.status(403).json({ error: 'Access restricted to AC Mobility accounts' });
   }
 
@@ -57,9 +48,9 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     const namePart = email.split('@')[0];
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace('.', ' ');
 
-    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-      await transporter.sendMail({
-        from: `"AC Mobility Admin" <${process.env.SMTP_USER}>`,
+    if (process.env.RESEND_API_KEY || 're_Gwq1LMrd_L27HeuRH3xWbdqJwDKdw5hBa') {
+      await resend.emails.send({
+        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
         to: email,
         subject: "Your Dashboard Sign-in Link",
         text: `Hello,\n\nPlease use this link to access the platform:\n\n${magicLinkUrl}\n\nThis link will expire in 15 minutes.`,
