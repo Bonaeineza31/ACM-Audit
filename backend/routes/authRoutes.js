@@ -6,7 +6,7 @@ import pool from '../config/db.js';
 import { Resend } from 'resend';
 import rateLimit from 'express-rate-limit';
 
-const resend = new Resend(process.env.RESEND_API_KEY || 're_Gwq1LMrd_L27HeuRH3xWbdqJwDKdw5hBa');
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Rate limiting for Magic Links (max 5 requests per hour per IP)
 const magicLinkLimiter = rateLimit({
@@ -48,7 +48,7 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     const namePart = email.split('@')[0];
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace('.', ' ');
 
-    if (process.env.RESEND_API_KEY || 're_Gwq1LMrd_L27HeuRH3xWbdqJwDKdw5hBa') {
+    if (process.env.RESEND_API_KEY) {
       await resend.emails.send({
         from: process.env.RESEND_FROM || 'onboarding@resend.dev',
         to: email,
