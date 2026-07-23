@@ -44,14 +44,45 @@ router.post('/magic-link', async (req, res) => {
     );
 
     const magicLinkUrl = `http://localhost:5173/?token=${token}&email=${encodeURIComponent(email)}`;
+    
+    // Extract name from email (e.g. bonae@acgroup.rw -> Bonae)
+    const namePart = email.split('@')[0];
+    const userName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
 
+    // Try to send real email if SMTP is configured, otherwise fallback to console
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       await transporter.sendMail({
         from: `"AC Mobility Admin" <${process.env.SMTP_USER}>`,
         to: email,
-        subject: "Your Admin Dashboard Sign-in Link",
-        text: `Hello,\n\nHere is your secure sign-in link for the AC Mobility Field Assessment Tool:\n\n${magicLinkUrl}\n\nThis link will expire in 1 hour.`,
-        html: `<h3>Hello,</h3><p>Here is your secure sign-in link for the AC Mobility Field Assessment Tool:</p><p><a href="${magicLinkUrl}" style="padding: 10px 20px; background-color: #18459D; color: white; text-decoration: none; border-radius: 5px;">Sign In Now</a></p><p>Or copy this link: <br> ${magicLinkUrl}</p><p>This link will expire in 1 hour.</p>`
+        subject: "Secure Sign-in Link - AC Mobility",
+        text: `Hello ${userName},\n\nPlease use this link to access the AC Mobility Field Assessment Tool:\n\n${magicLinkUrl}\n\nThis link will expire in 1 hour.`,
+        html: `
+          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 30px; border-radius: 8px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #18459D; margin: 0; font-size: 24px;">AC Mobility</h2>
+              <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Field Assessment Tool</p>
+            </div>
+            
+            <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+              <h3 style="color: #333; margin-top: 0;">Hello ${userName},</h3>
+              <p style="color: #555; line-height: 1.6;">You requested a secure magic link to access the platform. Click the button below to sign in instantly.</p>
+              
+              <div style="text-align: center; margin: 35px 0;">
+                <a href="${magicLinkUrl}" style="background-color: #18459D; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Access Dashboard</a>
+              </div>
+              
+              <p style="color: #777; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
+                If the button doesn't work, you can copy and paste this link into your browser:<br>
+                <a href="${magicLinkUrl}" style="color: #18459D; word-break: break-all;">${magicLinkUrl}</a>
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
+              <p>This link is for your account only and will expire in 1 hour.</p>
+              <p>&copy; ${new Date().getFullYear()} AC Mobility. All rights reserved.</p>
+            </div>
+          </div>
+        `
       });
       console.log(`==== EMAIL SENT TO ${email} ====`);
     } else {

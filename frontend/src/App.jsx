@@ -123,12 +123,12 @@ function App() {
         return (
           <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div>
-                <button className="btn btn-secondary mr-2" onClick={() => handleNavigate('landing')}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button className="btn btn-secondary" onClick={() => handleNavigate('landing')}>
                   &larr; Back to Home
                 </button>
                 <button 
-                  className={`btn ${dashboardView === 'overview' ? 'btn-primary' : 'btn-secondary'} mr-2`}
+                  className={`btn ${dashboardView === 'overview' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => setDashboardView('overview')}
                 >
                   Overview
