@@ -141,6 +141,15 @@ const initDb = async () => {
       VALUES ('bonae@acgroup.rw', 'Viewer') 
       ON CONFLICT (email) DO NOTHING;
     `);
+
+    // Migration: Add 'used' column to magic_links if it doesn't exist
+    try {
+      await pool.query('ALTER TABLE magic_links ADD COLUMN used BOOLEAN DEFAULT FALSE;');
+      console.log('Migration: added used column to magic_links');
+    } catch (e) {
+      // Column already exists, ignore
+    }
+
     console.log('Database tables initialized successfully');
   } catch (err) {
     console.error('Error initializing database tables:', err);

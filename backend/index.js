@@ -33,12 +33,9 @@ app.use('/api/assessments', assessmentRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/analytics', analyticsRoutes);
 
-// Serve static frontend files (if built)
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// Catch-all route for SPA to prevent 404 on reload
-app.use((req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+// Root route for Render health checks
+app.get('/', (req, res) => {
+  res.json({ message: 'AC Mobility API is running' });
 });
 
 // Error Handling Middleware
