@@ -1,8 +1,10 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 require('dotenv').config();
 
 const assessmentRoutes = require('./routes/assessmentRoutes');
+const authRoutes = require('./routes/authRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 const initDb = require('./seeds/initDb');
 
@@ -13,8 +15,17 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// API Routes
 app.use('/api/assessments', assessmentRoutes);
+app.use('/api/auth', authRoutes);
+
+// Serve static frontend files (if built)
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+// Catch-all route for SPA to prevent 404 on reload
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
 
 // Error Handling Middleware
 app.use(errorHandler);

@@ -11,8 +11,8 @@ const initDb = async () => {
         bus_company VARCHAR(255),
         area VARCHAR(255),
         address VARCHAR(255),
-        gps_lat DECIMAL(9,6),
-        gps_lng DECIMAL(9,6),
+        gps_lat DECIMAL(12,6),
+        gps_lng DECIMAL(12,6),
         assessor VARCHAR(255),
         weather_conditions VARCHAR(255),
         
@@ -30,11 +30,11 @@ const initDb = async () => {
         section_a_notes TEXT,
         
         -- Section B Timing
-        time_select_destination DECIMAL(5,2),
-        time_process_payment DECIMAL(5,2),
-        time_generate_ticket DECIMAL(5,2),
-        time_print_receipt DECIMAL(5,2),
-        time_complete_transaction DECIMAL(5,2),
+        time_select_destination DECIMAL(10,2),
+        time_process_payment DECIMAL(10,2),
+        time_generate_ticket DECIMAL(10,2),
+        time_print_receipt DECIMAL(10,2),
+        time_complete_transaction DECIMAL(10,2),
         
         -- Section C Compliance
         pos_ready_before_boarding VARCHAR(10),
@@ -61,8 +61,8 @@ const initDb = async () => {
         
         -- Section G Boarding Observation
         avg_queue_length INT,
-        avg_boarding_time DECIMAL(5,2),
-        longest_waiting_time DECIMAL(5,2),
+        avg_boarding_time DECIMAL(10,2),
+        longest_waiting_time DECIMAL(10,2),
         congestion_notes TEXT,
         
         -- Section H Incidents

@@ -2,30 +2,72 @@ import { useState } from 'react';
 import './App.css';
 import AssessmentForm from './components/AssessmentForm';
 import AssessmentList from './components/AssessmentList';
+import AssessmentDetail from './components/AssessmentDetail';
+import Login from './components/Login';
 import acmobilityLogo from './assets/acmobility_full.png';
 
 function App() {
   // view state: 'landing', 'auditForm', 'viewData'
   const [currentView, setCurrentView] = useState('landing');
+  const [selectedAssessment, setSelectedAssessment] = useState(null);
+  const [authToken, setAuthToken] = useState(localStorage.getItem('adminToken'));
+
+  const handleNavigate = (view) => {
+    setCurrentView(view);
+    setSelectedAssessment(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('adminToken');
+    setAuthToken(null);
+    handleNavigate('landing');
+  };
 
   const renderContent = () => {
     switch (currentView) {
       case 'auditForm':
         return (
           <div className="animate-fade-in">
-            <button className="btn btn-secondary mb-2" onClick={() => setCurrentView('landing')}>
+            <button className="btn btn-secondary mb-2" onClick={() => handleNavigate('landing')}>
               &larr; Back to Home
             </button>
             <AssessmentForm />
           </div>
         );
       case 'viewData':
+        if (!authToken) {
+          return (
+            <Login 
+              onLoginSuccess={(token) => {
+                localStorage.setItem('adminToken', token);
+                setAuthToken(token);
+              }} 
+              onCancel={() => handleNavigate('landing')} 
+            />
+          );
+        }
+
+        if (selectedAssessment) {
+          return (
+            <div className="animate-fade-in">
+              <AssessmentDetail 
+                assessment={selectedAssessment} 
+                onBack={() => setSelectedAssessment(null)} 
+              />
+            </div>
+          );
+        }
         return (
           <div className="animate-fade-in">
-            <button className="btn btn-secondary mb-2" onClick={() => setCurrentView('landing')}>
-              &larr; Back to Home
-            </button>
-            <AssessmentList />
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <button className="btn btn-secondary" onClick={() => handleNavigate('landing')}>
+                &larr; Back to Home
+              </button>
+              <button className="btn btn-secondary" onClick={handleLogout}>
+                Logout
+              </button>
+            </div>
+            <AssessmentList onViewDetail={setSelectedAssessment} />
           </div>
         );
       case 'landing':

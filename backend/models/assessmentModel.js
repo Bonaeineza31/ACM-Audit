@@ -6,9 +6,13 @@ class AssessmentModel {
     try {
       await client.query('BEGIN');
       
-      const assessmentId = data['Assessment ID'] || \`UNSPECIFIED-\${Date.now()}\`;
+      const maxIdResult = await client.query('SELECT MAX(id) as max_id FROM assessments');
+      const nextIdNumber = (maxIdResult.rows[0].max_id || 0) + 1;
+      const autoId = `ACM-AUDIT-${String(nextIdNumber).padStart(4, '0')}`;
+      
+      const assessmentId = data['Assessment ID'] || autoId;
 
-      const assessmentQuery = \`
+      const assessmentQuery = `
         INSERT INTO assessments (
           assessment_id, assessment_date, assessment_time, bus_company, area, address, gps_lat, gps_lng, assessor, weather_conditions,
           pos_powers_on, pos_application_loads, transaction_speed, ticket_generation_speed, receipt_printing_quality, network_connectivity, gps_accuracy, battery_performance, transaction_success_rate, overall_device_reliability, section_a_notes,
@@ -33,7 +37,7 @@ class AssessmentModel {
           $65, $66, $67, $68,
           $69, $70, $71, $72, $73, $74, $75, $76, $77, $78
         ) RETURNING id;
-      \`;
+      `;
       
       const values = [
         assessmentId, data['Assessment Date'] || null, data['Assessment Time'] || null, data['Bus Company'], data['Area'], data['Address'], data['GPS Latitude'] ? parseFloat(data['GPS Latitude']) : null, data['GPS Longitude'] ? parseFloat(data['GPS Longitude']) : null, data['Assessor'], data['Weather Conditions'],
@@ -47,16 +51,16 @@ class AssessmentModel {
         data['Ease of use - Rating'] || null, data['Transaction speed - Rating'] || null, data['Ticketing process - Rating'] || null, data['Payment options - Rating'] || null, data['System reliability - Rating'] || null, data['User interface - Rating'] || null, data['Staff efficiency - Rating'] || null, data['Customer experience - Rating'] || null, data['Reporting capability - Rating'] || null, data['Overall satisfaction - Rating'] || null,
         data['Strengths'], data['Weaknesses'], data['Risks Identified'], data['Recommended Improvements'],
         data['Overall Performance'], data['Recommend Continued Operation'], data['Reason'], data['Photographs Taken'], data['Video Recorded'], data['Additional Attachments'], data['Assessor Signature'], data['Assessor Sign-off Date'] || null, data['Supervisor Review'], data['Supervisor Review Date'] || null
-      ];
+      ].map(v => v === undefined ? null : v);
       
       await client.query(assessmentQuery, values);
 
       if (data.passengers && Array.isArray(data.passengers)) {
-        const passengerQuery = \`
+        const passengerQuery = `
           INSERT INTO passengers (
             assessment_id, passenger_number, payment_method, ease_of_payment, served_quickly, received_ticket_immediately, experienced_issue, issue_explanation, overall_satisfaction
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        \`;
+        `;
         
         for (let i = 0; i < data.passengers.length; i++) {
           const p = data.passengers[i];
@@ -70,7 +74,7 @@ class AssessmentModel {
             p['Experienced Payment/Ticketing Issue (Yes/No)'],
             p['Issue Explanation'],
             p['Overall Satisfaction (1-5)'] || null
-          ]);
+          ].map(v => v === undefined ? null : v));
         }
       }
       
@@ -85,7 +89,7 @@ class AssessmentModel {
   }
 
   static async findAll() {
-    const result = await pool.query('SELECT assessment_id, assessment_date, bus_company, area, overall_performance FROM assessments ORDER BY created_at DESC');
+    const result = await pool.query('SELECT * FROM assessments ORDER BY id DESC');
     return result.rows;
   }
 }

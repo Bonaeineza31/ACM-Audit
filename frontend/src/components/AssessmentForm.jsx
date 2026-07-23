@@ -37,7 +37,7 @@ function AssessmentForm() {
     setSubmitStatus(null);
     
     try {
-      const response = await fetch('http://localhost:5000/api/assessments', {
+      const response = await fetch('/api/assessments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -45,7 +45,10 @@ function AssessmentForm() {
         body: JSON.stringify(formData),
       });
       
-      if (!response.ok) throw new Error('Submission failed');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || 'Submission failed');
+      }
       
       setSubmitStatus('success');
       // Optional: reset form
@@ -53,7 +56,7 @@ function AssessmentForm() {
       // setActiveTab(0);
     } catch (error) {
       console.error(error);
-      setSubmitStatus('error');
+      setSubmitStatus(error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -121,8 +124,10 @@ function AssessmentForm() {
         {submitStatus === 'success' && (
           <div className="alert success animate-fade-in">Assessment submitted successfully!</div>
         )}
-        {submitStatus === 'error' && (
-          <div className="alert error animate-fade-in">Failed to submit assessment. Please try again.</div>
+        {submitStatus && submitStatus !== 'success' && (
+          <div className="status-message error animate-fade-in">
+            Failed to submit assessment: {submitStatus}
+          </div>
         )}
       </form>
     </div>

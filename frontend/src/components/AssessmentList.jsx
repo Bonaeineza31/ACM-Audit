@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import './AssessmentList.css';
 
-const AssessmentList = () => {
+const AssessmentList = ({ onViewDetail }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -18,7 +19,18 @@ const AssessmentList = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:5000/api/assessments');
+      const token = localStorage.getItem('adminToken');
+      const res = await fetch('/api/assessments', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (res.status === 401 || res.status === 403) {
+        // Token expired or invalid
+        localStorage.removeItem('adminToken');
+        window.location.reload();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to fetch data');
       const result = await res.json();
       // Assume the backend returns an array of assessments
@@ -31,24 +43,54 @@ const AssessmentList = () => {
     }
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (data.length === 0) return;
     
-    // Create worksheet from data
-    const ws = XLSX.utils.json_to_sheet(data);
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Assessments");
     
-    // Auto-size columns loosely based on header names
-    const colWidths = Object.keys(data[0] || {}).map(key => ({
-      wch: Math.max(key.length + 5, 15) 
+    // Extract format and keys
+    const keys = Object.keys(data[0] || {});
+    const headers = keys.map(key => key.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '));
+    
+    worksheet.columns = keys.map((key, i) => ({
+      header: headers[i],
+      key: key,
+      width: Math.max(headers[i].length + 5, 20)
     }));
-    ws['!cols'] = colWidths;
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Assessments");
     
-    // Save file
-    XLSX.writeFile(wb, `ACM_Audits_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    // Add Data
+    worksheet.addRows(data);
+    
+    // Style the Header Row
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF18459D' } // AC Mobility Blue (#18459D)
+      };
+      cell.font = {
+        name: 'Poppins',
+        color: { argb: 'FFFFFFFF' },
+        bold: true,
+        size: 11
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    
+    // Style Data Rows
+    worksheet.eachRow((row, rowNumber) => {
+      if (rowNumber === 1) return; // Skip header
+      row.eachCell((cell) => {
+        cell.font = { name: 'Poppins', size: 10 };
+        cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+      });
+    });
+    
+    // Generate and Download
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `ACM_Audits_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   // Pagination logic
@@ -88,6 +130,7 @@ const AssessmentList = () => {
                 <th>Area</th>
                 <th>Assessor</th>
                 <th>Overall Perf.</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -104,6 +147,11 @@ const AssessmentList = () => {
                     <span className={`badge ${row.overall_performance?.toLowerCase()}`}>
                       {row.overall_performance || 'N/A'}
                     </span>
+                  </td>
+                  <td>
+                    <button className="btn btn-secondary btn-sm" onClick={() => onViewDetail(row)}>
+                      View Details
+                    </button>
                   </td>
                 </tr>
               ))}
