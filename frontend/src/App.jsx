@@ -109,9 +109,6 @@ function App() {
         if (selectedAssessment) {
           return (
             <div className="animate-fade-in">
-              <button className="btn btn-secondary mb-2" onClick={() => setSelectedAssessment(null)}>
-                &larr; Back to Dashboard
-              </button>
               <AssessmentDetail 
                 assessment={selectedAssessment} 
                 onClose={() => setSelectedAssessment(null)}

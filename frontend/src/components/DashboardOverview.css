@@ -80,3 +80,25 @@
   color: #EF4444 !important;
   font-weight: bold;
 }
+
+.acm-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.acm-table th, .acm-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.acm-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #18459D;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}

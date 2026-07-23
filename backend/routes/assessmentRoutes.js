@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { createAssessment, getAssessments } = require('../controllers/assessmentController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const assessmentController = require('../controllers/assessmentController');
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
 
-router.post('/', createAssessment);
-router.get('/', authMiddleware, getAssessments);
+// Viewers cannot create assessments
+router.post('/', requireAuth, requireRole(['Admin', 'Assessor']), assessmentController.createAssessment);
+router.get('/', requireAuth, assessmentController.getAssessments);
 
 module.exports = router;

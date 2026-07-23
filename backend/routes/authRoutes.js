@@ -4,6 +4,14 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/db');
 const nodemailer = require('nodemailer');
+const rateLimit = require('express-rate-limit');
+
+// Rate limiter: 5 requests per hour
+const magicLinkLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: { error: 'Too many requests from this IP, please try again after an hour' }
+});
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -15,7 +23,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-router.post('/magic-link', async (req, res) => {
+router.post('/magic-link', magicLinkLimiter, async (req, res) => {
   let { email } = req.body;
   
   if (!email) {
@@ -35,11 +43,15 @@ router.post('/magic-link', async (req, res) => {
     }
 
     const user = userResult.rows[0];
+    
+    // Invalidate previous outstanding links for this user
+    await pool.query('UPDATE magic_links SET used = TRUE WHERE user_id = $1 AND used = FALSE', [user.id]);
+
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     await pool.query(
-      "INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '1 hour')",
+      "INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')",
       [user.id, tokenHash]
     );
 
@@ -55,7 +67,7 @@ router.post('/magic-link', async (req, res) => {
         from: `"AC Mobility Admin" <${process.env.SMTP_USER}>`,
         to: email,
         subject: "Secure Sign-in Link - AC Mobility",
-        text: `Hello ${userName},\n\nPlease use this link to access the AC Mobility Field Assessment Tool:\n\n${magicLinkUrl}\n\nThis link will expire in 1 hour.`,
+        text: `Hello ${userName},\n\nPlease use this link to access the AC Mobility Field Assessment Tool:\n\n${magicLinkUrl}\n\nThis link will expire in 15 minutes.`,
         html: `
           <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 30px; border-radius: 8px;">
             <div style="text-align: center; margin-bottom: 30px;">
@@ -78,7 +90,7 @@ router.post('/magic-link', async (req, res) => {
             </div>
             
             <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-              <p>This link is for your account only and will expire in 1 hour.</p>
+              <p>This link is for your account only and will expire in 15 minutes.</p>
               <p>&copy; ${new Date().getFullYear()} AC Mobility. All rights reserved.</p>
             </div>
           </div>

@@ -24,7 +24,7 @@ const getKPIs = async (req, res, next) => {
       whereClause += ` AND area = $${queryParams.length}`;
     }
 
-    // 1. KPIs
+    // 1. KPIs (Current Period)
     const kpiQuery = `
       SELECT 
         COUNT(*) as total_assessments,
@@ -36,8 +36,34 @@ const getKPIs = async (req, res, next) => {
       ${whereClause}
     `;
     
-    const kpiResult = await pool.query(kpiQuery, queryParams);
+    // 1b. KPIs (Previous Period for Trend)
+    // For simplicity without complex date logic in MVP, we'll assume the previous period is all records BEFORE the current period.
+    // If no dates provided, trend is compared to 0.
+    let prevWhereClause = 'WHERE 1=1';
+    let prevParams = [];
+    if (operator && operator !== 'all') { prevParams.push(operator); prevWhereClause += ` AND bus_company = $${prevParams.length}`; }
+    if (area && area !== 'all') { prevParams.push(area); prevWhereClause += ` AND area = $${prevParams.length}`; }
+    // Just a basic fallback for trend if no time filter is applied (compare to a week ago)
+    prevWhereClause += ` AND assessment_date < CURRENT_DATE - INTERVAL '7 days'`;
+
+    const prevKpiQuery = `
+      SELECT 
+        COUNT(*) as total_assessments,
+        COALESCE(SUM(card_transactions + mm_transactions), 0) as total_cashless,
+        COALESCE(SUM(card_transactions + mm_transactions + cash_transactions + other_transactions), 0) as total_transactions,
+        COALESCE(SUM(incidents_failed_transactions + incidents_manual_tickets + incidents_duplicate_tickets), 0) as total_revenue_risks,
+        COUNT(CASE WHEN overall_performance = 'Pass' OR eval_overall_satisfaction >= 4 THEN 1 END) as passed_assessments
+      FROM assessments
+      ${prevWhereClause}
+    `;
+
+    const [kpiResult, prevKpiResult] = await Promise.all([
+      pool.query(kpiQuery, queryParams),
+      pool.query(prevKpiQuery, prevParams)
+    ]);
+    
     const row = kpiResult.rows[0];
+    const prevRow = prevKpiResult.rows[0];
     
     const totalAssessments = parseInt(row.total_assessments) || 0;
     const totalCashless = parseInt(row.total_cashless) || 0;
@@ -45,14 +71,35 @@ const getKPIs = async (req, res, next) => {
     const totalRisks = parseInt(row.total_revenue_risks) || 0;
     const passedAssessments = parseInt(row.passed_assessments) || 0;
 
-    const cashlessAdoption = totalTransactions > 0 ? ((totalCashless / totalTransactions) * 100).toFixed(1) : 0;
-    const passRate = totalAssessments > 0 ? ((passedAssessments / totalAssessments) * 100).toFixed(1) : 0;
+    const prevTotalAssessments = parseInt(prevRow.total_assessments) || 0;
+    const prevTotalCashless = parseInt(prevRow.total_cashless) || 0;
+    const prevTotalTransactions = parseInt(prevRow.total_transactions) || 0;
+    const prevTotalRisks = parseInt(prevRow.total_revenue_risks) || 0;
+    const prevPassedAssessments = parseInt(prevRow.passed_assessments) || 0;
+
+    const cashlessAdoption = totalTransactions > 0 ? ((totalCashless / totalTransactions) * 100) : 0;
+    const prevCashlessAdoption = prevTotalTransactions > 0 ? ((prevTotalCashless / prevTotalTransactions) * 100) : 0;
+    
+    const passRate = totalAssessments > 0 ? ((passedAssessments / totalAssessments) * 100) : 0;
+    const prevPassRate = prevTotalAssessments > 0 ? ((prevPassedAssessments / prevTotalAssessments) * 100) : 0;
 
     const kpis = {
-      cashlessAdoption: { value: parseFloat(cashlessAdoption), trend: 2.1 }, // Trend mocked for now since we need historical comparison
-      assessments: { value: totalAssessments, trend: 15 },
-      revenueRiskIncidents: { value: totalRisks, trend: -5 },
-      compliancePassRate: { value: parseFloat(passRate), trend: 1.2 }
+      cashlessAdoption: { 
+        value: parseFloat(cashlessAdoption.toFixed(1)), 
+        trend: parseFloat(calcTrend(cashlessAdoption, prevCashlessAdoption).toFixed(1))
+      },
+      assessments: { 
+        value: totalAssessments, 
+        trend: parseFloat(calcTrend(totalAssessments, prevTotalAssessments).toFixed(1))
+      },
+      revenueRiskIncidents: { 
+        value: totalRisks, 
+        trend: parseFloat(calcTrend(totalRisks, prevTotalRisks).toFixed(1)) 
+      },
+      compliancePassRate: { 
+        value: parseFloat(passRate.toFixed(1)), 
+        trend: parseFloat(calcTrend(passRate, prevPassRate).toFixed(1))
+      }
     };
 
     // 2. Line Chart: Cashless Adoption Over Time
@@ -137,17 +184,22 @@ const getKPIs = async (req, res, next) => {
 const getIssues = async (req, res, next) => {
   try {
     const issuesQuery = `
-      SELECT 
-        id,
-        assessment_date as date,
-        bus_company as operator,
-        area,
-        assessor,
-        section_c_remarks as owner,
-        greatest_cause_of_delay as faileditem
-      FROM assessments
-      WHERE greatest_cause_of_delay IS NOT NULL AND greatest_cause_of_delay != ''
-      ORDER BY id DESC
+      WITH IssueCounts AS (
+        SELECT 
+          id,
+          assessment_date as date,
+          bus_company as operator,
+          area,
+          assessor,
+          section_c_remarks as owner,
+          greatest_cause_of_delay as faileditem,
+          COUNT(*) OVER(PARTITION BY bus_company, greatest_cause_of_delay) as count_30_days
+        FROM assessments
+        WHERE greatest_cause_of_delay IS NOT NULL AND greatest_cause_of_delay != ''
+        AND assessment_date >= CURRENT_DATE - INTERVAL '30 days'
+      )
+      SELECT * FROM IssueCounts
+      ORDER BY count_30_days DESC, id DESC
     `;
     const issuesResult = await pool.query(issuesQuery);
     
@@ -159,7 +211,8 @@ const getIssues = async (req, res, next) => {
       date: r.date || 'Unknown',
       assessor: r.assessor || 'Unknown',
       status: 'open', // Mocked status since we don't have an issue tracker table yet
-      owner: r.owner || 'IT Support'
+      owner: r.owner || 'IT Support',
+      isRepeat: parseInt(r.count_30_days) >= 2
     }));
     
     res.json(issues);

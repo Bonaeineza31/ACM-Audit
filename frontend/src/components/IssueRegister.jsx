@@ -7,7 +7,7 @@ const IssueRegister = () => {
   const [error, setError] = useState(null);
   
   // Filters
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('open');
 
   useEffect(() => {
     fetchIssues();
@@ -59,7 +59,7 @@ const IssueRegister = () => {
 
         filteredIssues.forEach(issue => {
           const issueData = [
-            `ISS-${issue.id.toString().padStart(4, '0')}`,
+            `ISS-${issue.id.toString().padStart(4, '0')}${issue.isRepeat ? ' (REPEAT)' : ''}`,
             issue.failedItem,
             issue.operator,
             issue.area,
@@ -82,9 +82,16 @@ const IssueRegister = () => {
     });
   };
 
-  const filteredIssues = statusFilter === 'all' 
+  // 1. Filter by status
+  // 2. Sort so repeats are at the top, then by ID descending (which the DB already does)
+  const filteredIssues = (statusFilter === 'all' 
     ? issues 
-    : issues.filter(i => i.status.toLowerCase() === statusFilter);
+    : issues.filter(i => i.status.toLowerCase() === statusFilter))
+    .sort((a, b) => {
+      if (a.isRepeat && !b.isRepeat) return -1;
+      if (!a.isRepeat && b.isRepeat) return 1;
+      return 0; // maintain db order (ID desc)
+    });
 
   if (loading) return <div className="text-center p-5">Loading issue register...</div>;
   if (error) return <div className="alert error">Error: {error}</div>;
@@ -99,10 +106,10 @@ const IssueRegister = () => {
             onChange={e => setStatusFilter(e.target.value)} 
             className="form-control"
           >
-            <option value="all">All Statuses</option>
             <option value="open">Open</option>
             <option value="acknowledged">Acknowledged</option>
             <option value="resolved">Resolved</option>
+            <option value="all">All Statuses</option>
           </select>
           <button className="btn btn-primary" onClick={exportPDF}>Export PDF</button>
         </div>
@@ -124,8 +131,11 @@ const IssueRegister = () => {
           </thead>
           <tbody>
             {filteredIssues.map((issue) => (
-              <tr key={issue.id}>
-                <td>ISS-{issue.id.toString().padStart(4, '0')}</td>
+              <tr key={issue.id} style={{ backgroundColor: issue.isRepeat ? 'rgba(239, 68, 68, 0.05)' : 'transparent' }}>
+                <td>
+                  ISS-{issue.id.toString().padStart(4, '0')}
+                  {issue.isRepeat && <span style={{ marginLeft: '8px', fontSize: '0.75rem', backgroundColor: '#EF4444', color: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>REPEAT</span>}
+                </td>
                 <td className="fw-bold">{issue.failedItem}</td>
                 <td>{issue.operator}</td>
                 <td>{issue.area}</td>

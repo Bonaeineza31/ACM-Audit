@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('../controllers/analyticsController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const { requireAuth } = require('../middleware/authMiddleware');
 
-// All analytics routes require Viewer role
-router.use(authMiddleware);
-
-router.get('/kpis', analyticsController.getKPIs);
-router.get('/issues', analyticsController.getIssues);
+router.get('/kpis', requireAuth, analyticsController.getKPIs);
+router.get('/issues', requireAuth, analyticsController.getIssues);
 
 module.exports = router;
