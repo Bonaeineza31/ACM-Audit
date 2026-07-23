@@ -108,7 +108,7 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });
   } catch (error) {
     console.error('Magic link error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
