@@ -6,6 +6,7 @@ require('dotenv').config();
 
 const assessmentRoutes = require('./routes/assessmentRoutes');
 const authRoutes = require('./routes/authRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 const initDb = require('./seeds/initDb');
 
@@ -14,7 +15,7 @@ const port = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite default port
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -23,6 +24,7 @@ app.use(cookieParser());
 // API Routes
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Serve static frontend files (if built)
 app.use(express.static(path.join(__dirname, '../frontend/dist')));

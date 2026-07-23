@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import AssessmentForm from './components/AssessmentForm';
-import AssessmentList from './components/AssessmentList';
+import DashboardOverview from './components/DashboardOverview';
+import IssueRegister from './components/IssueRegister';
 import AssessmentDetail from './components/AssessmentDetail';
 import Login from './components/Login';
 import acmobilityLogo from './assets/acmobility_full.png';
@@ -9,6 +10,7 @@ import acmobilityLogo from './assets/acmobility_full.png';
 function App() {
   // view state: 'landing', 'auditForm', 'viewData'
   const [currentView, setCurrentView] = useState('landing');
+  const [dashboardView, setDashboardView] = useState('overview');
   const [selectedAssessment, setSelectedAssessment] = useState(null);
   const [authToken, setAuthToken] = useState(false);
   const [verifying, setVerifying] = useState(false);
@@ -103,24 +105,46 @@ function App() {
         if (selectedAssessment) {
           return (
             <div className="animate-fade-in">
+              <button className="btn btn-secondary mb-2" onClick={() => setSelectedAssessment(null)}>
+                &larr; Back to Dashboard
+              </button>
               <AssessmentDetail 
                 assessment={selectedAssessment} 
-                onBack={() => setSelectedAssessment(null)} 
+                onClose={() => setSelectedAssessment(null)}
               />
             </div>
           );
         }
+
         return (
           <div className="animate-fade-in">
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <button className="btn btn-secondary" onClick={() => handleNavigate('landing')}>
-                &larr; Back to Home
-              </button>
-              <button className="btn btn-secondary" onClick={handleLogout}>
+              <div>
+                <button className="btn btn-secondary mr-2" onClick={() => handleNavigate('landing')}>
+                  &larr; Back to Home
+                </button>
+                <button 
+                  className={`btn ${dashboardView === 'overview' ? 'btn-primary' : 'btn-secondary'} mr-2`}
+                  onClick={() => setDashboardView('overview')}
+                >
+                  Overview
+                </button>
+                <button 
+                  className={`btn ${dashboardView === 'issues' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setDashboardView('issues')}
+                >
+                  Issue Register
+                </button>
+              </div>
+              <button className="btn btn-secondary" style={{ color: 'red' }} onClick={handleLogout}>
                 Logout
               </button>
             </div>
-            <AssessmentList onViewDetail={setSelectedAssessment} />
+            {dashboardView === 'overview' ? (
+              <DashboardOverview onViewDetail={setSelectedAssessment} />
+            ) : (
+              <IssueRegister />
+            )}
           </div>
         );
       case 'landing':

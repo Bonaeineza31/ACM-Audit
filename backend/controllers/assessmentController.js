@@ -12,6 +12,23 @@ const createAssessment = async (req, res, next) => {
 const getAssessments = async (req, res, next) => {
   try {
     const assessments = await AssessmentModel.findAll();
+    
+    // If user is a Viewer, redact Section F (Officer Interview)
+    if (req.user && req.user.role === 'Viewer') {
+      const redactedAssessments = assessments.map(assessment => {
+        const {
+          pos_issues_today,
+          unsuccessful_transactions,
+          network_interruption_freq,
+          greatest_cause_of_delay,
+          officer_suggestions,
+          ...allowedData
+        } = assessment;
+        return allowedData;
+      });
+      return res.json(redactedAssessments);
+    }
+
     res.json(assessments);
   } catch (error) {
     next(error);

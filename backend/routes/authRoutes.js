@@ -13,9 +13,15 @@ const magicLinkLimiter = rateLimit({
 });
 
 router.post('/magic-link', magicLinkLimiter, async (req, res) => {
-  const { email } = req.body;
+  let { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required.' });
+  }
+  
+  email = email.trim().toLowerCase();
 
-  if (!email || (!email.endsWith('@acgroup.rw') && !email.endsWith('@acmobility.com'))) {
+  if (!email.endsWith('@acgroup.rw') && !email.endsWith('@acmobility.com')) {
     return res.status(400).json({ error: 'Invalid domain. Please use your AC Mobility email.' });
   }
 
