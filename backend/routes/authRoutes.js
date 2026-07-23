@@ -55,7 +55,8 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
       [user.id, tokenHash]
     );
 
-    const magicLinkUrl = `http://localhost:5173/?token=${token}&email=${encodeURIComponent(email)}`;
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const magicLinkUrl = `${baseUrl}/?token=${token}&email=${encodeURIComponent(email)}`;
     
     // Extract name from email (e.g. bonae@acgroup.rw -> Bonae)
     const namePart = email.split('@')[0];
