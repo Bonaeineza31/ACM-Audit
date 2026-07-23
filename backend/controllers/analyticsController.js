@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 // Helper to calculate percentage change
 const calcTrend = (current, previous) => {
@@ -6,7 +6,7 @@ const calcTrend = (current, previous) => {
   return ((current - previous) / previous) * 100;
 };
 
-const getKPIs = async (req, res, next) => {
+export const getKPIs = async (req, res, next) => {
   try {
     const { startDate, endDate, operator, area } = req.query;
     
@@ -181,7 +181,7 @@ const getKPIs = async (req, res, next) => {
   }
 };
 
-const getIssues = async (req, res, next) => {
+export const getIssues = async (req, res, next) => {
   try {
     const issuesQuery = `
       WITH IssueCounts AS (
@@ -221,7 +221,4 @@ const getIssues = async (req, res, next) => {
   }
 };
 
-module.exports = {
-  getKPIs,
-  getIssues
-};
+

@@ -1,9 +1,12 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const analyticsController = require('../controllers/analyticsController');
-const { requireAuth } = require('../middleware/authMiddleware');
+import { getKPIs, getIssues } from '../controllers/analyticsController.js';
+import { requireAuth } from '../middleware/authMiddleware.js';
 
-router.get('/kpis', requireAuth, analyticsController.getKPIs);
-router.get('/issues', requireAuth, analyticsController.getIssues);
+// All analytics routes require authentication
+router.use(requireAuth);
 
-module.exports = router;
+router.get('/kpis', getKPIs);
+router.get('/issues', getIssues);
+
+export default router;

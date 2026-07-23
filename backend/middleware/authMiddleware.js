@@ -1,8 +1,8 @@
-const jwt = require('jsonwebtoken');
-const pool = require('../config/db');
+import jwt from 'jsonwebtoken';
+import pool from '../config/db.js';
 
-const requireAuth = async (req, res, next) => {
-  const token = req.cookies.acm_session;
+export const requireAuth = async (req, res, next) => {
+  const token = req.cookies?.acm_session;
   
   if (!token) {
     return res.status(401).json({ error: 'Unauthorized: No session token provided' });
@@ -24,7 +24,7 @@ const requireAuth = async (req, res, next) => {
   }
 };
 
-const requireRole = (allowedRoles) => {
+export const requireRole = (allowedRoles) => {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
       return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
@@ -32,5 +32,3 @@ const requireRole = (allowedRoles) => {
     next();
   };
 };
-
-module.exports = { requireAuth, requireRole };

@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 class AssessmentModel {
   static async create(data) {
@@ -94,4 +94,4 @@ class AssessmentModel {
   }
 }
 
-module.exports = AssessmentModel;
+export default AssessmentModel;

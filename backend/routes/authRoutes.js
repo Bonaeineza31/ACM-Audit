@@ -1,18 +1,12 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const crypto = require('crypto');
-const jwt = require('jsonwebtoken');
-const pool = require('../config/db');
-const nodemailer = require('nodemailer');
-const rateLimit = require('express-rate-limit');
+import crypto from 'crypto';
+import jwt from 'jsonwebtoken';
+import pool from '../config/db.js';
+import nodemailer from 'nodemailer';
+import rateLimit from 'express-rate-limit';
 
-// Rate limiter: 5 requests per hour
-const magicLinkLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: { error: 'Too many requests from this IP, please try again after an hour' }
-});
-
+// Set up email transporter
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: process.env.SMTP_PORT || 465,
@@ -23,17 +17,18 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-router.post('/magic-link', magicLinkLimiter, async (req, res) => {
-  let { email } = req.body;
-  
-  if (!email) {
-    return res.status(400).json({ error: 'Email is required.' });
-  }
-  
-  email = email.trim().toLowerCase();
+// Rate limiting for Magic Links (max 5 requests per hour per IP)
+const magicLinkLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, 
+  max: 5,
+  message: { error: 'Too many requests from this IP, please try again after an hour' }
+});
 
-  if (!email.endsWith('@acgroup.rw') && !email.endsWith('@acmobility.com')) {
-    return res.status(400).json({ error: 'Invalid domain. Please use your AC Mobility email.' });
+router.post('/magic-link', magicLinkLimiter, async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || (!email.endsWith('@acgroup.rw') && !email.endsWith('@acmobility.com'))) {
+    return res.status(403).json({ error: 'Access restricted to AC Mobility accounts' });
   }
 
   try {
@@ -43,8 +38,8 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     }
 
     const user = userResult.rows[0];
-    
-    // Invalidate previous outstanding links for this user
+
+    // Invalidate old links for this user so only the newest works
     await pool.query('UPDATE magic_links SET used = TRUE WHERE user_id = $1 AND used = FALSE', [user.id]);
 
     const token = crypto.randomBytes(32).toString('hex');
@@ -60,48 +55,40 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     
     // Extract name from email (e.g. bonae@acgroup.rw -> Bonae)
     const namePart = email.split('@')[0];
-    const userName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace('.', ' ');
 
-    // Try to send real email if SMTP is configured, otherwise fallback to console
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       await transporter.sendMail({
         from: `"AC Mobility Admin" <${process.env.SMTP_USER}>`,
         to: email,
-        subject: "Secure Sign-in Link - AC Mobility",
-        text: `Hello ${userName},\n\nPlease use this link to access the AC Mobility Field Assessment Tool:\n\n${magicLinkUrl}\n\nThis link will expire in 15 minutes.`,
+        subject: "Your Dashboard Sign-in Link",
+        text: `Hello,\n\nPlease use this link to access the platform:\n\n${magicLinkUrl}\n\nThis link will expire in 15 minutes.`,
         html: `
-          <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 30px; border-radius: 8px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h2 style="color: #18459D; margin: 0; font-size: 24px;">AC Mobility</h2>
-              <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Field Assessment Tool</p>
+          <div style="font-family: Arial, sans-serif; color: #333; max-width: 500px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+            <div style="background-color: #f7fbff; padding: 20px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+              <h2 style="color: #0056b3; margin: 0;">AC Mobility Dashboard</h2>
             </div>
-            
-            <div style="background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-              <h3 style="color: #333; margin-top: 0;">Hello ${userName},</h3>
-              <p style="color: #555; line-height: 1.6;">You requested a secure magic link to access the platform. Click the button below to sign in instantly.</p>
+            <div style="padding: 30px 20px;">
+              <p style="font-size: 16px;">Hello ${formattedName},</p>
+              <p style="font-size: 16px;">We received a request to sign in to the AC Mobility Analytics Dashboard. Click the secure button below to access your account instantly.</p>
               
-              <div style="text-align: center; margin: 35px 0;">
-                <a href="${magicLinkUrl}" style="background-color: #18459D; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block;">Access Dashboard</a>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${magicLinkUrl}" style="background-color: #ffb800; color: #333; font-weight: bold; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-size: 16px; display: inline-block;">
+                  Sign In to Dashboard
+                </a>
               </div>
               
-              <p style="color: #777; font-size: 13px; line-height: 1.5; margin-bottom: 0;">
-                If the button doesn't work, you can copy and paste this link into your browser:<br>
-                <a href="${magicLinkUrl}" style="color: #18459D; word-break: break-all;">${magicLinkUrl}</a>
-              </p>
+              <p style="font-size: 14px; color: #777;">This link is valid for exactly <strong>15 minutes</strong> and can only be used once.</p>
             </div>
-            
-            <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-              <p>This link is for your account only and will expire in 15 minutes.</p>
-              <p>&copy; ${new Date().getFullYear()} AC Mobility. All rights reserved.</p>
+            <div style="background-color: #f9f9f9; padding: 15px; text-align: center; font-size: 12px; color: #999;">
+              &copy; ${new Date().getFullYear()} AC Mobility. All rights reserved.
             </div>
           </div>
         `
       });
-      console.log(`==== EMAIL SENT TO ${email} ====`);
     } else {
       console.log('\n==== MAGIC LINK GENERATED ====');
-      console.log(`User: ${email}`);
-      console.log(`Link: ${magicLinkUrl}`);
+      console.log(`URL: ${magicLinkUrl}`);
       console.log('==============================\n');
     }
 
@@ -113,52 +100,53 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
 });
 
 router.post('/verify', async (req, res) => {
-  const { token, email } = req.body;
-
-  if (!token || !email) {
-    return res.status(400).json({ error: 'Missing token or email' });
-  }
+  const { email, token } = req.body;
 
   try {
-    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    const userResult = await pool.query('SELECT id, role FROM users WHERE email = $1', [email]);
+    if (userResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired link' });
+    }
+    const user = userResult.rows[0];
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     
-    // Check if token exists, is valid, and matches email
-    const linkResult = await pool.query(`
-      SELECT m.id, m.user_id, u.role
-      FROM magic_links m
-      JOIN users u ON m.user_id = u.id
-      WHERE m.token_hash = $1 AND u.email = $2 AND m.used = FALSE AND m.expires_at > NOW()
-    `, [hash, email]);
+    // Ensure the link exists, is not expired, AND has not been used yet
+    const linkResult = await pool.query(
+      'SELECT id FROM magic_links WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW() AND used = FALSE',
+      [user.id, tokenHash]
+    );
 
     if (linkResult.rows.length === 0) {
-      return res.status(401).json({ error: 'Expired or invalid link' });
+      return res.status(401).json({ error: 'Invalid or expired link' });
     }
 
-    const { id, user_id, role } = linkResult.rows[0];
+    // Mark the link as used so it cannot be used again
+    await pool.query('UPDATE magic_links SET used = TRUE WHERE id = $1', [linkResult.rows[0].id]);
 
-    // Invalidate token
-    await pool.query('UPDATE magic_links SET used = TRUE WHERE id = $1', [id]);
-
-    // Create session token (expires in 7 days)
-    const sessionToken = jwt.sign({ userId: user_id }, process.env.JWT_SECRET || 'supersecretacmobility', { expiresIn: '7d' });
+    const sessionToken = jwt.sign(
+      { userId: user.id, role: user.role },
+      process.env.JWT_SECRET || 'supersecretacmobility',
+      { expiresIn: '8h' }
+    );
 
     res.cookie('acm_session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      sameSite: 'strict',
+      maxAge: 8 * 60 * 60 * 1000 // 8 hours
     });
 
-    res.json({ success: true, role });
+    res.status(200).json({ message: 'Authentication successful', role: user.role });
   } catch (error) {
-    console.error('Verify error:', error);
+    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 router.post('/logout', (req, res) => {
   res.clearCookie('acm_session');
-  res.json({ success: true });
+  res.status(200).json({ message: 'Logged out successfully' });
 });
 
-module.exports = router;
+export default router;

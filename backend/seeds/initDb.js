@@ -1,4 +1,4 @@
-const pool = require('../config/db');
+import pool from '../config/db.js';
 
 const initDb = async () => {
   try {
@@ -159,8 +159,11 @@ const initDb = async () => {
   }
 };
 
-if (require.main === module) {
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
   initDb().then(() => process.exit(0));
 }
 
-module.exports = initDb;
+export default initDb;

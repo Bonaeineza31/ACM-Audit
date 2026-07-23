@@ -1,14 +1,19 @@
-const express = require('express');
-const cors = require('cors');
-const cookieParser = require('cookie-parser');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
 
-const assessmentRoutes = require('./routes/assessmentRoutes');
-const authRoutes = require('./routes/authRoutes');
-const analyticsRoutes = require('./routes/analyticsRoutes');
-const errorHandler = require('./middlewares/errorHandler');
-const initDb = require('./seeds/initDb');
+import assessmentRoutes from './routes/assessmentRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import errorHandler from './middlewares/errorHandler.js';
+import initDb from './seeds/initDb.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 5000;

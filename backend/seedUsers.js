@@ -1,23 +1,20 @@
-const pool = require('./config/db');
+import pool from './config/db.js';
 
 const emails = [
-  'bamuines20@gmail.com', 'sharon@acgroup.rw', 'dennis.kalisa@acgroup.rw', 'abitsumutima@gmail.com',
-  'gelio@acgroup.rw', 'cyusa.amour@acgroup.rw', 'jacques.dusabimana@acgroup.rw', 'elia@acgroup.rw',
-  'rurisa@acgroup.rw', 'jeannefuraha359@gmail.com', 'gasavianney1977@gmail.com', 'gasoreeugene12@gmail.com',
-  'habinshuti.denys@acgroup.rw', 'habiyamberemarcel12@gmail.com', 'harerimana.binego@acgroup.rw',
-  'hodari2020@gmail.com', 'divine.ingabire@acgroup.rw', 'intwaza.gael@acgroup.rw', 'benndalton@acgroup.rw',
-  'iradukundajoyeuse5@gmail.com', 'eloi.iratanga@acgroup.rw', 'ishimweclaude@acgroup.rw', 'kalex@acgroup.rw',
-  'kanamugire.heritier@acgroup.rw', 'esthermpyisi@acgroup.rw', 'kasande.alice@acgroup.rw',
-  'innocent.kayiranga@acgroup.rw', 'kayitareolivier12@gmail.com', 'kinzigirepacific@gmail.com',
-  'kwibukaphilippe@acgroup.rw', 'kwizera.emmanuel@acgroup.rw', 'mandela.vincent@acgroup.rw',
-  'jmbonigaba05@gmail.com', 'mugabocharlies250@gmail.com', 'piusmu16@gmail.com', 'jmugunga@acgroup.rw',
-  'noel@acgroup.rw', 'mukagasana.26@acgroup.rw', 'mumararungu.shabani@acgroup.rw', 'jclaude.munezero@acgroup.rw',
-  'rose.munezero@acgroup.rw', 'shyakainnocent123@gmail.com', 'chrimusemakweri@gmail.com', 'mutabazi@acgroup.rw',
-  'mutangana.emmanuel@acgroup.rw', 'william@acgroup.rw', 'jaqueline@acgroup.rw', 'ndagijedan05@gmail.com',
-  'ndayisaba@acgroup.rw', 'ndayichris12@gmail.com', 'nduwayezu@acgroup.rw', 'nikuze.ange@acgroup.rw',
-  'romalis@acgroup.rw', 'niyogakiza@acgroup.rw', 'sam.niyomukiza@acgroup.rw', 'niyonizeyesamuel54@gmail.com',
-  'amosniyonkuru5@gmail.com', 'jeanpniyonsaba@gmail.com', 'jean.bosco@acgroup.rw', 'rusagara.emmanuel@acgroup.rw',
-  'bobopatrick417@gmail.com', 'rutayisire@acgroup.rw', 'sano@acgroup.rw', 'hambali.sebutatari@acgroup.rw',
+  'abedihyacinthe@gmail.com', 'mukunzi@acgroup.rw', 'alex.twahirwa@acgroup.rw', 'alice.ntirenganya@acgroup.rw',
+  'ntirenganyaalice@gmail.com', 'aman.rurangwa@acgroup.rw', 'augustin.mugisha@acgroup.rw', 'benjamin.duhozanye@acgroup.rw',
+  'benji.tuyishimire@acgroup.rw', 'berabemwiza@acgroup.rw', 'bethy@acgroup.rw', 'bosco@acgroup.rw',
+  'bosco.tuyisenge@acgroup.rw', 'chancelline@acgroup.rw', 'claude.tuyizere@acgroup.rw', 'clement.murinzi@acgroup.rw',
+  'darcy@acgroup.rw', 'delphines@acgroup.rw', 'denis@acgroup.rw', 'diane.ishimwe@acgroup.rw',
+  'diane.mutoni@acgroup.rw', 'edith@acgroup.rw', 'elite.muhoza@acgroup.rw', 'eugenie@acgroup.rw',
+  'fabrice.nsengiyumva@acgroup.rw', 'fabrice.shimwa@acgroup.rw', 'gaetan@acgroup.rw', 'hirwa.aime@acgroup.rw',
+  'ida@acgroup.rw', 'igabe.jeandamascene@acgroup.rw', 'ignace.ndizeye@acgroup.rw', 'immaculee@acgroup.rw',
+  'innocent.ishimwe@acgroup.rw', 'isidore@acgroup.rw', 'jean.paul@acgroup.rw', 'joan@acgroup.rw',
+  'karangwa@acgroup.rw', 'karanganwa.steve@acgroup.rw', 'laissa@acgroup.rw', 'lambert.iradukunda@acgroup.rw',
+  'mario@acgroup.rw', 'mbabazi@acgroup.rw', 'mugeni@acgroup.rw', 'mugwaneza.yvonne@acgroup.rw',
+  'mushimiyimana@acgroup.rw', 'mwizakwizera@acgroup.rw', 'n.yvette@acgroup.rw', 'ndagijimana.nathan@acgroup.rw',
+  'ngoboka@acgroup.rw', 'nyiraneza.angelique@acgroup.rw', 'olivier@acgroup.rw', 'patrick@acgroup.rw',
+  'rodrigue@acgroup.rw', 'sabin@acgroup.rw', 'safi@acgroup.rw', 'samuel@acgroup.rw',
   'shumbusho.emile@acgroup.rw', 'shyaka.honore@acgroup.rw', 'sibomana.mubarack@acgroup.rw', 'tuyizere.gaston@acgroup.rw',
   'steven@acgroup.rw', 'eurempie@acgroup.rw', 'umuhoza.vanessa@acgroup.rw', 'umunyanapauline@acgroup.rw',
   'urayenezalourence7@gmail.com', 'uwimbabazi@acgroup.rw', 'bildad.wafula@acgroup.rw', 'fidelite@acgroup.rw',
@@ -26,20 +23,31 @@ const emails = [
 
 async function seed() {
   try {
-    let count = 0;
+    let inserted = 0;
+    
     for (const email of emails) {
-      const res = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-      if (res.rows.length === 0) {
-        await pool.query('INSERT INTO users (email, role) VALUES ($1, $2)', [email, 'Viewer']);
-        count++;
+      // Viewer role restricts access to analytics only and hides sensitive sections.
+      // Assuming Viewer role covers all emails here based on PRD
+      const role = 'Viewer';
+      
+      const checkResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+      if (checkResult.rows.length === 0) {
+        await pool.query('INSERT INTO users (email, role) VALUES ($1, $2)', [email, role]);
+        inserted++;
       }
     }
-    console.log(`Successfully seeded ${count} new users.`);
-    process.exit(0);
+    
+    console.log(`Successfully seeded ${inserted} new users.`);
   } catch (error) {
-    console.error('Seeding error:', error);
-    process.exit(1);
+    console.error('Error seeding users:', error);
+  } finally {
+    await pool.end();
   }
 }
 
-seed();
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
+  seed();
+}

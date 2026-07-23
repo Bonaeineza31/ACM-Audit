@@ -1,24 +1,40 @@
-const crypto = require('crypto');
-const pool = require('./config/db');
+import crypto from 'crypto';
+import pool from './config/db.js';
 
-async function generate() {
+async function generateLink(email) {
   try {
-    const user = await pool.query("SELECT id FROM users WHERE email='bonae@acgroup.rw'");
+    const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (userRes.rows.length === 0) {
+      console.log('User not found. Run seedUsers.js first.');
+      process.exit(1);
+    }
+    
+    const userId = userRes.rows[0].id;
     const token = crypto.randomBytes(32).toString('hex');
-    const hash = crypto.createHash('sha256').update(token).digest('hex');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     
-    await pool.query("INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '1 hour')", [user.rows[0].id, hash]);
+    await pool.query(
+      "INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')",
+      [userId, tokenHash]
+    );
     
-    console.log('\n======================================================');
-    console.log('✅✅✅ MAGIC LINK SUCCESSFULLY GENERATED ✅✅✅');
-    console.log('COPY THIS EXACT LINK AND PASTE IT INTO YOUR BROWSER:');
-    console.log(`http://localhost:5173/?token=${token}&email=bonae@acgroup.rw`);
-    console.log('======================================================\n');
-  } catch(e) {
-    console.error(e);
-  } finally {
-    pool.end();
+    const magicLinkUrl = `http://localhost:5173/?token=${token}&email=${encodeURIComponent(email)}`;
+    console.log('\n==== LOCAL DEV MAGIC LINK ====');
+    console.log(`User: ${email}`);
+    console.log(`Link: ${magicLinkUrl}`);
+    console.log('==============================\n');
+    
+    process.exit(0);
+  } catch (err) {
+    console.error('Error:', err);
+    process.exit(1);
   }
 }
 
-generate();
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+
+if (process.argv[1] === __filename) {
+  const email = process.argv[2] || 'bonae@acgroup.rw';
+  generateLink(email);
+}
