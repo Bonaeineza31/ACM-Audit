@@ -12,7 +12,9 @@ function App() {
   const [currentView, setCurrentView] = useState('landing');
   const [dashboardView, setDashboardView] = useState('overview');
   const [selectedAssessment, setSelectedAssessment] = useState(null);
-  const [authToken, setAuthToken] = useState(false);
+  
+  // The actual security is the HttpOnly cookie, this is just a UI flag
+  const [authToken, setAuthToken] = useState(localStorage.getItem('isLoggedIn') === 'true');
   const [verifying, setVerifying] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -37,6 +39,7 @@ function App() {
       const data = await res.json();
       if (res.ok && data.success) {
         setAuthToken(true);
+        localStorage.setItem('isLoggedIn', 'true');
         setCurrentView('viewData');
         // Clean URL
         window.history.replaceState({}, document.title, '/');
@@ -60,6 +63,7 @@ function App() {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch(e) {}
     setAuthToken(false);
+    localStorage.removeItem('isLoggedIn');
     handleNavigate('landing');
   };
 

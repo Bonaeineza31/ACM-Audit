@@ -19,6 +19,11 @@ const DashboardOverview = ({ onViewDetail }) => {
       const res = await fetch(`/api/analytics/kpis?dateRange=${dateRange}&operator=${operator}&area=${area}`, {
         credentials: 'include'
       });
+      if (res.status === 401) {
+        localStorage.removeItem('isLoggedIn');
+        window.location.reload();
+        return;
+      }
       if (!res.ok) throw new Error('Failed to fetch analytics');
       const result = await res.json();
       setData(result);

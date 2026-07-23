@@ -2,17 +2,20 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
-const rateLimit = require('express-rate-limit');
 const pool = require('../config/db');
+const nodemailer = require('nodemailer');
 
-// Rate limiter: 5 requests per hour
-const magicLinkLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  max: 5,
-  message: { error: 'Too many requests from this IP, please try again after an hour' }
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: process.env.SMTP_PORT || 465,
+  secure: true, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  }
 });
 
-router.post('/magic-link', magicLinkLimiter, async (req, res) => {
+router.post('/magic-link', async (req, res) => {
   let { email } = req.body;
   
   if (!email) {
@@ -25,33 +28,40 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     return res.status(400).json({ error: 'Invalid domain. Please use your AC Mobility email.' });
   }
 
-  const genericResponse = { message: 'If that address is registered, a sign-in link is on its way. It expires in 15 minutes.' };
-
   try {
     const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
     if (userResult.rows.length === 0) {
-      return res.json(genericResponse);
+      return res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });
     }
 
-    const userId = userResult.rows[0].id;
-
-    // Invalidate previous outstanding links for this user
-    await pool.query('UPDATE magic_links SET used = TRUE WHERE user_id = $1 AND used = FALSE', [userId]);
-
-    // Generate crypto token
+    const user = userResult.rows[0];
     const token = crypto.randomBytes(32).toString('hex');
-    const hash = crypto.createHash('sha256').update(token).digest('hex');
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
     await pool.query(
-      'INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
-      [userId, hash, expiresAt]
+      "INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '1 hour')",
+      [user.id, tokenHash]
     );
 
-    const magicLink = `http://localhost:5173/verify?token=${token}&email=${encodeURIComponent(email)}`;
-    console.log(`\n\n==== MAGIC LINK GENERATED ====\nUser: ${email}\nLink: ${magicLink}\n==============================\n\n`);
+    const magicLinkUrl = `http://localhost:5173/?token=${token}&email=${encodeURIComponent(email)}`;
 
-    return res.json(genericResponse);
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      await transporter.sendMail({
+        from: `"AC Mobility Admin" <${process.env.SMTP_USER}>`,
+        to: email,
+        subject: "Your Admin Dashboard Sign-in Link",
+        text: `Hello,\n\nHere is your secure sign-in link for the AC Mobility Field Assessment Tool:\n\n${magicLinkUrl}\n\nThis link will expire in 1 hour.`,
+        html: `<h3>Hello,</h3><p>Here is your secure sign-in link for the AC Mobility Field Assessment Tool:</p><p><a href="${magicLinkUrl}" style="padding: 10px 20px; background-color: #18459D; color: white; text-decoration: none; border-radius: 5px;">Sign In Now</a></p><p>Or copy this link: <br> ${magicLinkUrl}</p><p>This link will expire in 1 hour.</p>`
+      });
+      console.log(`==== EMAIL SENT TO ${email} ====`);
+    } else {
+      console.log('\n==== MAGIC LINK GENERATED ====');
+      console.log(`User: ${email}`);
+      console.log(`Link: ${magicLinkUrl}`);
+      console.log('==============================\n');
+    }
+
+    res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });
   } catch (error) {
     console.error('Magic link error:', error);
     res.status(500).json({ error: 'Internal server error' });

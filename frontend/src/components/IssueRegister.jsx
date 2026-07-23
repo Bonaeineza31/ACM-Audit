@@ -42,6 +42,46 @@ const IssueRegister = () => {
     }
   };
 
+  const exportPDF = () => {
+    import('jspdf').then(jsPDFModule => {
+      import('jspdf-autotable').then(() => {
+        const jsPDF = jsPDFModule.default;
+        const doc = new jsPDF();
+        
+        doc.setFontSize(18);
+        doc.text('AC Mobility - Issue Register', 14, 22);
+        
+        doc.setFontSize(11);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
+        
+        const tableColumn = ["ID", "Failed Item", "Operator", "Area", "Status", "Owner"];
+        const tableRows = [];
+
+        filteredIssues.forEach(issue => {
+          const issueData = [
+            `ISS-${issue.id.toString().padStart(4, '0')}`,
+            issue.failedItem,
+            issue.operator,
+            issue.area,
+            issue.status,
+            issue.owner
+          ];
+          tableRows.push(issueData);
+        });
+
+        doc.autoTable({
+          head: [tableColumn],
+          body: tableRows,
+          startY: 40,
+          theme: 'grid',
+          headStyles: { fillColor: [24, 69, 157] }
+        });
+
+        doc.save('ACM-Issue-Register.pdf');
+      });
+    });
+  };
+
   const filteredIssues = statusFilter === 'all' 
     ? issues 
     : issues.filter(i => i.status.toLowerCase() === statusFilter);
@@ -64,7 +104,7 @@ const IssueRegister = () => {
             <option value="acknowledged">Acknowledged</option>
             <option value="resolved">Resolved</option>
           </select>
-          <button className="btn btn-primary">Export CSV</button>
+          <button className="btn btn-primary" onClick={exportPDF}>Export PDF</button>
         </div>
       </div>
 
