@@ -18,6 +18,8 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const port = process.env.PORT || 5000;
 
+app.set('trust proxy', 1); // Fixes express-rate-limit error on cloud providers
+
 // Middleware
 const allowedOrigins = ['http://localhost:5173', 'https://acm-audit.vercel.app'];
 app.use(cors({
@@ -46,12 +48,16 @@ app.get('/', (req, res) => {
 // Error Handling Middleware
 app.use(errorHandler);
 
-// Initialize DB and start server
-const startServer = async () => {
-  await initDb();
-  app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
-};
+// Initialize DB and start server (Only if not running on Vercel Serverless)
+if (process.env.NODE_ENV !== 'production' || process.env.RENDER) {
+  const startServer = async () => {
+    await initDb();
+    app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
+  };
+  startServer();
+}
 
-startServer();
+// Export for Vercel Serverless Functions
+export default app;

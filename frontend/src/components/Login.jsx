@@ -21,6 +21,7 @@ const Login = ({ onCancel }) => {
       });
 
       const data = await res.json();
+      
       // PRD: Show the same message regardless of whether it's valid or not
       setMessage(data.message || data.error || 'If that address is registered, a sign-in link is on its way. It expires in 15 minutes.');
     } catch (err) {
