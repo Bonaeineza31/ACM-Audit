@@ -3,10 +3,20 @@ const router = express.Router();
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Create a Nodemailer transporter using your exact configuration
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  tls: {
+    rejectUnauthorized: false,
+  },
+});
 
 // Rate limiting for Magic Links (max 5 requests per hour per IP)
 const magicLinkLimiter = rateLimit({
@@ -48,9 +58,9 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
     const namePart = email.split('@')[0];
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace('.', ' ');
 
-    if (process.env.RESEND_API_KEY) {
-      await resend.emails.send({
-        from: process.env.RESEND_FROM || 'onboarding@resend.dev',
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      await transporter.sendMail({
+        from: `"AC Mobility Admin" <${process.env.SMTP_USER}>`,
         to: email,
         subject: "Your Dashboard Sign-in Link",
         text: `Hello,\n\nPlease use this link to access the platform:\n\n${magicLinkUrl}\n\nThis link will expire in 15 minutes.`,
