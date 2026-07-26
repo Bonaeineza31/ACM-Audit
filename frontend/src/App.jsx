@@ -37,7 +37,7 @@ function App() {
         body: JSON.stringify({ token, email })
       });
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (res.ok) {
         setAuthToken(true);
         localStorage.setItem('isLoggedIn', 'true');
         setCurrentView('viewData');
