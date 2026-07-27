@@ -202,7 +202,7 @@ function AssessmentForm() {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="form-content">
+      <div className="form-content" onKeyDown={handleKeyDown}>
         <div className="tab-panels">
           {renderActiveSection()}
         </div>
@@ -232,18 +232,15 @@ function AssessmentForm() {
             </button>
           ) : (
             <button 
-              type="submit" 
+              type="button" 
               className="btn btn-primary ml-auto submit-btn" 
               disabled={isSubmitting}
               onClick={(e) => {
                 // Check if they just changed to this tab a split second ago
-                if (Date.now() - window.lastTabChangeTime < 1000) {
-                  e.preventDefault();
+                if (window.lastTabChangeTime && Date.now() - window.lastTabChangeTime < 1000) {
                   return;
                 }
-                if (e.detail > 1) {
-                  e.preventDefault();
-                }
+                handleSubmit(e);
               }}
             >
               {isSubmitting ? 'Submitting...' : 'Submit Assessment'}
@@ -259,7 +256,7 @@ function AssessmentForm() {
             Failed to submit assessment: {submitStatus}
           </div>
         )}
-      </form>
+      </div>
     </div>
   );
 }
