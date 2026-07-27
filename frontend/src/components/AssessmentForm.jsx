@@ -29,6 +29,15 @@ function AssessmentForm() {
 
   const handleUpdateField = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    if (submitStatus) setSubmitStatus(null);
+  };
+
+  const handleKeyDown = (e) => {
+    // Prevent Enter key from accidentally submitting the entire form
+    // unless they are inside a textarea where Enter should create a newline
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -51,9 +60,14 @@ function AssessmentForm() {
       }
       
       setSubmitStatus('success');
-      // Optional: reset form
-      // setFormData({});
-      // setActiveTab(0);
+      // Reset form so the user can enter another assessment
+      setFormData({});
+      setActiveTab(0);
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus(null);
+      }, 5000);
     } catch (error) {
       console.error(error);
       setSubmitStatus(error.message);
