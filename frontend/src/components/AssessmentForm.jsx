@@ -125,11 +125,28 @@ function AssessmentForm() {
           )}
           
           {activeTab < tabs.length - 1 ? (
-            <button type="button" className="btn btn-primary ml-auto" onClick={nextTab}>
+            <button type="button" className="btn btn-primary ml-auto" onClick={(e) => {
+              // Prevent double clicks by temporarily disabling the button
+              e.currentTarget.disabled = true;
+              nextTab();
+              setTimeout(() => {
+                if (e.currentTarget) e.currentTarget.disabled = false;
+              }, 500);
+            }}>
               Next Section
             </button>
           ) : (
-            <button type="submit" className="btn btn-primary ml-auto" disabled={isSubmitting}>
+            <button 
+              type="submit" 
+              className="btn btn-primary ml-auto submit-btn" 
+              disabled={isSubmitting}
+              onClick={(e) => {
+                // Prevent accidental double click on submit
+                if (e.detail > 1) {
+                  e.preventDefault();
+                }
+              }}
+            >
               {isSubmitting ? 'Submitting...' : 'Submit Assessment'}
             </button>
           )}
