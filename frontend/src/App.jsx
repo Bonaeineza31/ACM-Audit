@@ -119,25 +119,27 @@ function App() {
 
         return (
           <div className="animate-fade-in">
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button className="btn btn-secondary" onClick={() => handleNavigate('landing')}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '10px', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', flex: '1 1 auto' }}>
+                <button className="btn btn-secondary" style={{ flex: '1 1 auto', padding: '10px' }} onClick={() => handleNavigate('landing')}>
                   &larr; Back to Home
                 </button>
                 <button 
                   className={`btn ${dashboardView === 'overview' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => setDashboardView('overview')}
+                  style={{ flex: '1 1 auto', padding: '10px' }}
                 >
                   Overview
                 </button>
                 <button 
                   className={`btn ${dashboardView === 'issues' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => setDashboardView('issues')}
+                  style={{ flex: '1 1 auto', padding: '10px' }}
                 >
                   Issue Register
                 </button>
               </div>
-              <button className="btn btn-secondary" style={{ color: 'red' }} onClick={handleLogout}>
+              <button className="btn btn-secondary" style={{ color: 'red', flex: '1 1 auto', padding: '10px' }} onClick={handleLogout}>
                 Logout
               </button>
             </div>

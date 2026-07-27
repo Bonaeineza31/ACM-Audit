@@ -51,9 +51,9 @@ const DashboardOverview = ({ onViewDetail }) => {
   // PRD: Empty state matters
   if (data.kpis.assessments.value === 0) {
     return (
-      <div className="dashboard-container glass-container text-center p-5">
-        <h2>No assessments in this period</h2>
-        <p>Try widening the date range to see analytics.</p>
+      <div className="glass-container" style={{ textAlign: 'center', padding: '2rem 1rem', width: '100%', margin: '0 auto' }}>
+        <h2 style={{ color: '#18459D', fontSize: '1.5rem', marginBottom: '1rem' }}>No assessments in this period</h2>
+        <p style={{ color: '#666', fontSize: '1rem' }}>Try widening the date range to see analytics.</p>
       </div>
     );
   }
