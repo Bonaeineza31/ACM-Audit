@@ -21,15 +21,8 @@ const port = process.env.PORT || 5000;
 app.set('trust proxy', 1); // Fixes express-rate-limit error on cloud providers
 
 // Middleware
-const allowedOrigins = ['http://localhost:5173', 'https://acm-audit.vercel.app'];
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
