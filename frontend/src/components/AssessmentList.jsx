@@ -124,7 +124,7 @@ const AssessmentList = ({ onViewDetail }) => {
     <div className="glass-container list-view">
       <div className="list-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
         <h2>Assessment Reports</h2>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap', width: '100%' }}>
           <input 
             type="text" 
             placeholder="Search by Assessor, Company, or ID..." 
@@ -134,11 +134,13 @@ const AssessmentList = ({ onViewDetail }) => {
               padding: '8px 12px',
               borderRadius: '6px',
               border: '1px solid #ddd',
-              width: '250px',
-              fontFamily: 'Poppins'
+              width: '100%',
+              maxWidth: '300px',
+              fontFamily: 'Poppins',
+              flex: '1 1 auto'
             }}
           />
-          <button className="btn btn-primary" onClick={exportToExcel} disabled={data.length === 0}>
+          <button className="btn btn-primary" onClick={exportToExcel} disabled={data.length === 0} style={{ flexShrink: 0 }}>
             Export to Excel
           </button>
         </div>
