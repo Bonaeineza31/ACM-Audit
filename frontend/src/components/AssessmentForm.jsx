@@ -163,7 +163,10 @@ function AssessmentForm() {
     }
   };
 
-  const nextTab = () => setActiveTab(prev => Math.min(tabs.length - 1, prev + 1));
+  const nextTab = () => {
+    window.lastTabChangeTime = Date.now();
+    setActiveTab(prev => Math.min(tabs.length - 1, prev + 1));
+  };
   const prevTab = () => setActiveTab(prev => Math.max(0, prev - 1));
 
   const renderActiveSection = () => {
@@ -219,9 +222,10 @@ function AssessmentForm() {
                 const btn = e.target;
                 btn.style.pointerEvents = 'none';
                 nextTab();
+                // When we reach the final tab, disable submit for 1 second to prevent double-tap
                 setTimeout(() => {
-                  btn.style.pointerEvents = 'auto';
-                }, 500);
+                  if (btn) btn.style.pointerEvents = 'auto';
+                }, 1000);
               }}
             >
               Next Section
@@ -232,7 +236,11 @@ function AssessmentForm() {
               className="btn btn-primary ml-auto submit-btn" 
               disabled={isSubmitting}
               onClick={(e) => {
-                // Prevent accidental double click on submit
+                // Check if they just changed to this tab a split second ago
+                if (Date.now() - window.lastTabChangeTime < 1000) {
+                  e.preventDefault();
+                  return;
+                }
                 if (e.detail > 1) {
                   e.preventDefault();
                 }

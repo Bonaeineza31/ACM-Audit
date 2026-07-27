@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import pool from '../config/db.js';
+import User from '../models/User.js';
 
 export const requireAuth = async (req, res, next) => {
   const token = req.cookies?.acm_session;
@@ -10,14 +10,14 @@ export const requireAuth = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretacmobility');
-    const userResult = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [decoded.userId]);
+    const user = await User.findById(decoded.userId).select('-__v');
     
-    if (userResult.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ error: 'Unauthorized: Invalid user' });
     }
     
     // Attach user to request for downstream controllers
-    req.user = userResult.rows[0];
+    req.user = user;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Unauthorized: Invalid session token' });

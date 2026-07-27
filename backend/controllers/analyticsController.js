@@ -1,6 +1,5 @@
-import pool from '../config/db.js';
+import AssessmentModel from '../models/assessmentModel.js';
 
-// Helper to calculate percentage change
 const calcTrend = (current, previous) => {
   if (previous === 0) return current > 0 ? 100 : 0;
   return ((current - previous) / previous) * 100;
@@ -10,72 +9,71 @@ export const getKPIs = async (req, res, next) => {
   try {
     const { startDate, endDate, operator, area } = req.query;
     
-    // Base WHERE clause
-    let whereClause = 'WHERE 1=1';
-    let queryParams = [];
-    
-    if (operator && operator !== 'all') {
-      queryParams.push(operator);
-      whereClause += ` AND bus_company = $${queryParams.length}`;
-    }
-    
-    if (area && area !== 'all') {
-      queryParams.push(area);
-      whereClause += ` AND area = $${queryParams.length}`;
-    }
+    let match = {};
+    if (operator && operator !== 'all') match.bus_company = operator;
+    if (area && area !== 'all') match.area = area;
 
-    // 1. KPIs (Current Period)
-    const kpiQuery = `
-      SELECT 
-        COUNT(*) as total_assessments,
-        COALESCE(SUM(card_transactions + mm_transactions), 0) as total_cashless,
-        COALESCE(SUM(card_transactions + mm_transactions + cash_transactions + other_transactions), 0) as total_transactions,
-        COALESCE(SUM(incidents_failed_transactions + incidents_manual_tickets + incidents_duplicate_tickets), 0) as total_revenue_risks,
-        COUNT(CASE WHEN overall_performance = 'Pass' OR eval_overall_satisfaction >= 4 THEN 1 END) as passed_assessments
-      FROM assessments
-      ${whereClause}
-    `;
-    
-    // 1b. KPIs (Previous Period for Trend)
-    // For simplicity without complex date logic in MVP, we'll assume the previous period is all records BEFORE the current period.
-    // If no dates provided, trend is compared to 0.
-    let prevWhereClause = 'WHERE 1=1';
-    let prevParams = [];
-    if (operator && operator !== 'all') { prevParams.push(operator); prevWhereClause += ` AND bus_company = $${prevParams.length}`; }
-    if (area && area !== 'all') { prevParams.push(area); prevWhereClause += ` AND area = $${prevParams.length}`; }
-    // Just a basic fallback for trend if no time filter is applied (compare to a week ago)
-    prevWhereClause += ` AND assessment_date < CURRENT_DATE - INTERVAL '7 days'`;
+    const kpiPipeline = [
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          total_assessments: { $sum: 1 },
+          total_cashless: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }] } },
+          total_transactions: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }, { $ifNull: ["$cash_transactions", 0] }, { $ifNull: ["$other_transactions", 0] }] } },
+          total_revenue_risks: { $sum: { $add: [{ $ifNull: ["$incidents_failed_transactions", 0] }, { $ifNull: ["$incidents_manual_tickets", 0] }, { $ifNull: ["$incidents_duplicate_tickets", 0] }] } },
+          passed_assessments: {
+            $sum: {
+              $cond: [{ $or: [{ $eq: ["$overall_performance", "Pass"] }, { $gte: ["$eval_overall_satisfaction", 4] }] }, 1, 0]
+            }
+          }
+        }
+      }
+    ];
 
-    const prevKpiQuery = `
-      SELECT 
-        COUNT(*) as total_assessments,
-        COALESCE(SUM(card_transactions + mm_transactions), 0) as total_cashless,
-        COALESCE(SUM(card_transactions + mm_transactions + cash_transactions + other_transactions), 0) as total_transactions,
-        COALESCE(SUM(incidents_failed_transactions + incidents_manual_tickets + incidents_duplicate_tickets), 0) as total_revenue_risks,
-        COUNT(CASE WHEN overall_performance = 'Pass' OR eval_overall_satisfaction >= 4 THEN 1 END) as passed_assessments
-      FROM assessments
-      ${prevWhereClause}
-    `;
+    let prevMatch = { ...match };
+    // Basic fallback: 7 days ago
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    prevMatch.createdAt = { $lt: sevenDaysAgo };
+
+    const prevKpiPipeline = [
+      { $match: prevMatch },
+      {
+        $group: {
+          _id: null,
+          total_assessments: { $sum: 1 },
+          total_cashless: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }] } },
+          total_transactions: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }, { $ifNull: ["$cash_transactions", 0] }, { $ifNull: ["$other_transactions", 0] }] } },
+          total_revenue_risks: { $sum: { $add: [{ $ifNull: ["$incidents_failed_transactions", 0] }, { $ifNull: ["$incidents_manual_tickets", 0] }, { $ifNull: ["$incidents_duplicate_tickets", 0] }] } },
+          passed_assessments: {
+            $sum: {
+              $cond: [{ $or: [{ $eq: ["$overall_performance", "Pass"] }, { $gte: ["$eval_overall_satisfaction", 4] }] }, 1, 0]
+            }
+          }
+        }
+      }
+    ];
 
     const [kpiResult, prevKpiResult] = await Promise.all([
-      pool.query(kpiQuery, queryParams),
-      pool.query(prevKpiQuery, prevParams)
+      AssessmentModel.aggregate(kpiPipeline),
+      AssessmentModel.aggregate(prevKpiPipeline)
     ]);
     
-    const row = kpiResult.rows[0];
-    const prevRow = prevKpiResult.rows[0];
+    const row = kpiResult[0] || {};
+    const prevRow = prevKpiResult[0] || {};
     
-    const totalAssessments = parseInt(row.total_assessments) || 0;
-    const totalCashless = parseInt(row.total_cashless) || 0;
-    const totalTransactions = parseInt(row.total_transactions) || 0;
-    const totalRisks = parseInt(row.total_revenue_risks) || 0;
-    const passedAssessments = parseInt(row.passed_assessments) || 0;
+    const totalAssessments = row.total_assessments || 0;
+    const totalCashless = row.total_cashless || 0;
+    const totalTransactions = row.total_transactions || 0;
+    const totalRisks = row.total_revenue_risks || 0;
+    const passedAssessments = row.passed_assessments || 0;
 
-    const prevTotalAssessments = parseInt(prevRow.total_assessments) || 0;
-    const prevTotalCashless = parseInt(prevRow.total_cashless) || 0;
-    const prevTotalTransactions = parseInt(prevRow.total_transactions) || 0;
-    const prevTotalRisks = parseInt(prevRow.total_revenue_risks) || 0;
-    const prevPassedAssessments = parseInt(prevRow.passed_assessments) || 0;
+    const prevTotalAssessments = prevRow.total_assessments || 0;
+    const prevTotalCashless = prevRow.total_cashless || 0;
+    const prevTotalTransactions = prevRow.total_transactions || 0;
+    const prevTotalRisks = prevRow.total_revenue_risks || 0;
+    const prevPassedAssessments = prevRow.passed_assessments || 0;
 
     const cashlessAdoption = totalTransactions > 0 ? ((totalCashless / totalTransactions) * 100) : 0;
     const prevCashlessAdoption = prevTotalTransactions > 0 ? ((prevTotalCashless / prevTotalTransactions) * 100) : 0;
@@ -103,68 +101,79 @@ export const getKPIs = async (req, res, next) => {
     };
 
     // 2. Line Chart: Cashless Adoption Over Time
-    const lineChartQuery = `
-      SELECT 
-        assessment_date as date,
-        COALESCE(SUM(card_transactions + mm_transactions), 0) as cashless,
-        COALESCE(SUM(card_transactions + mm_transactions + cash_transactions + other_transactions), 0) as total
-      FROM assessments
-      ${whereClause}
-      GROUP BY assessment_date
-      ORDER BY assessment_date ASC
-      LIMIT 10
-    `;
-    const lineChartResult = await pool.query(lineChartQuery, queryParams);
-    const cashlessAdoptionOverTime = lineChartResult.rows.map(r => ({
-      date: r.date || 'Unknown',
-      adoption: parseInt(r.total) > 0 ? Math.round((parseInt(r.cashless) / parseInt(r.total)) * 100) : 0
+    const lineChartPipeline = [
+      { $match: match },
+      {
+        $group: {
+          _id: "$assessment_date",
+          cashless: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }] } },
+          total: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }, { $ifNull: ["$cash_transactions", 0] }, { $ifNull: ["$other_transactions", 0] }] } }
+        }
+      },
+      { $sort: { _id: 1 } },
+      { $limit: 10 }
+    ];
+    
+    const lineChartResult = await AssessmentModel.aggregate(lineChartPipeline);
+    const cashlessAdoptionOverTime = lineChartResult.map(r => ({
+      date: r._id || 'Unknown',
+      adoption: r.total > 0 ? Math.round((r.cashless / r.total) * 100) : 0
     }));
 
     // 3. Bar Chart: Incidents by Operator
-    const barChartQuery = `
-      SELECT 
-        bus_company as operator,
-        COALESCE(SUM(incidents_failed_transactions + incidents_manual_tickets + incidents_duplicate_tickets), 0) as incidents
-      FROM assessments
-      ${whereClause}
-      GROUP BY bus_company
-      ORDER BY incidents DESC
-      LIMIT 5
-    `;
-    const barChartResult = await pool.query(barChartQuery, queryParams);
-    const incidentsByOperator = barChartResult.rows.map(r => ({
-      operator: r.operator || 'Unknown',
-      incidents: parseInt(r.incidents)
+    const barChartPipeline = [
+      { $match: match },
+      {
+        $group: {
+          _id: "$bus_company",
+          incidents: { $sum: { $add: [{ $ifNull: ["$incidents_failed_transactions", 0] }, { $ifNull: ["$incidents_manual_tickets", 0] }, { $ifNull: ["$incidents_duplicate_tickets", 0] }] } }
+        }
+      },
+      { $sort: { incidents: -1 } },
+      { $limit: 5 }
+    ];
+    
+    const barChartResult = await AssessmentModel.aggregate(barChartPipeline);
+    const incidentsByOperator = barChartResult.map(r => ({
+      operator: r._id || 'Unknown',
+      incidents: r.incidents
     }));
 
     // 4. Operator Comparison Table
-    const opQuery = `
-      SELECT 
-        bus_company as operator,
-        COUNT(*) as assessmentCount,
-        COALESCE(SUM(card_transactions + mm_transactions), 0) as cashless,
-        COALESCE(SUM(card_transactions + mm_transactions + cash_transactions + other_transactions), 0) as total,
-        AVG(eval_overall_satisfaction) as health,
-        COUNT(CASE WHEN overall_performance = 'Pass' OR eval_overall_satisfaction >= 4 THEN 1 END) as passed,
-        AVG(time_complete_transaction) as avgTime,
-        COALESCE(SUM(incidents_failed_transactions + incidents_manual_tickets + incidents_duplicate_tickets), 0) as incidents
-      FROM assessments
-      ${whereClause}
-      GROUP BY bus_company
-    `;
-    const opResult = await pool.query(opQuery, queryParams);
+    const opPipeline = [
+      { $match: match },
+      {
+        $group: {
+          _id: "$bus_company",
+          assessmentCount: { $sum: 1 },
+          cashless: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }] } },
+          total: { $sum: { $add: [{ $ifNull: ["$card_transactions", 0] }, { $ifNull: ["$mm_transactions", 0] }, { $ifNull: ["$cash_transactions", 0] }, { $ifNull: ["$other_transactions", 0] }] } },
+          healthSum: { $sum: { $ifNull: ["$eval_overall_satisfaction", 0] } },
+          passed: {
+            $sum: {
+              $cond: [{ $or: [{ $eq: ["$overall_performance", "Pass"] }, { $gte: ["$eval_overall_satisfaction", 4] }] }, 1, 0]
+            }
+          },
+          avgTime: { $avg: { $ifNull: ["$time_complete_transaction", 0] } },
+          incidents: { $sum: { $add: [{ $ifNull: ["$incidents_failed_transactions", 0] }, { $ifNull: ["$incidents_manual_tickets", 0] }, { $ifNull: ["$incidents_duplicate_tickets", 0] }] } }
+        }
+      }
+    ];
     
-    const operatorComparison = opResult.rows.map(r => {
-      const tot = parseInt(r.total) || 0;
-      const count = parseInt(r.assessmentcount) || 0;
+    const opResult = await AssessmentModel.aggregate(opPipeline);
+    const operatorComparison = opResult.map(r => {
+      const tot = r.total || 0;
+      const count = r.assessmentCount || 0;
+      const healthAvg = count > 0 ? (r.healthSum / count) : 0;
+      
       return {
-        operator: r.operator || 'Unknown',
+        operator: r._id || 'Unknown',
         assessmentCount: count,
-        adoption: tot > 0 ? Math.round((parseInt(r.cashless) / tot) * 100) : 0,
-        healthScore: r.health ? Math.round((parseFloat(r.health) / 5) * 100) : 0,
-        passRate: count > 0 ? Math.round((parseInt(r.passed) / count) * 100) : 0,
-        avgTime: r.avgtime ? parseFloat(r.avgtime).toFixed(1) : 0,
-        incidentDensity: count > 0 ? (parseInt(r.incidents) / count).toFixed(1) : 0
+        adoption: tot > 0 ? Math.round((r.cashless / tot) * 100) : 0,
+        healthScore: healthAvg ? Math.round((healthAvg / 5) * 100) : 0,
+        passRate: count > 0 ? Math.round((r.passed / count) * 100) : 0,
+        avgTime: r.avgTime ? r.avgTime.toFixed(1) : 0,
+        incidentDensity: count > 0 ? (r.incidents / count).toFixed(1) : 0
       };
     });
 
@@ -183,42 +192,58 @@ export const getKPIs = async (req, res, next) => {
 
 export const getIssues = async (req, res, next) => {
   try {
-    const issuesQuery = `
-      WITH IssueCounts AS (
-        SELECT 
-          id,
-          assessment_date as date,
-          bus_company as operator,
-          area,
-          assessor,
-          section_c_remarks as owner,
-          greatest_cause_of_delay as faileditem,
-          COUNT(*) OVER(PARTITION BY bus_company, greatest_cause_of_delay) as count_30_days
-        FROM assessments
-        WHERE greatest_cause_of_delay IS NOT NULL AND greatest_cause_of_delay != ''
-        AND assessment_date >= CURRENT_DATE - INTERVAL '30 days'
-      )
-      SELECT * FROM IssueCounts
-      ORDER BY count_30_days DESC, id DESC
-    `;
-    const issuesResult = await pool.query(issuesQuery);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     
-    const issues = issuesResult.rows.map(r => ({
-      id: r.id,
-      failedItem: r.faileditem || 'System Issue',
-      operator: r.operator || 'Unknown',
-      area: r.area || 'Unknown',
-      date: r.date || 'Unknown',
-      assessor: r.assessor || 'Unknown',
-      status: 'open', // Mocked status since we don't have an issue tracker table yet
-      owner: r.owner || 'IT Support',
-      isRepeat: parseInt(r.count_30_days) >= 2
-    }));
+    const issuesPipeline = [
+      {
+        $match: {
+          greatest_cause_of_delay: { $exists: true, $ne: null, $ne: "" },
+          createdAt: { $gte: thirtyDaysAgo }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          assessment_date: 1,
+          bus_company: 1,
+          area: 1,
+          assessor: 1,
+          section_c_remarks: 1,
+          greatest_cause_of_delay: 1,
+        }
+      },
+      { $sort: { createdAt: -1 } }
+    ];
+    
+    // In MongoDB we can't easily do OVER(PARTITION) inline like SQL, 
+    // so we'll just fetch them and flag repeats in code for simplicity
+    const issuesResult = await AssessmentModel.aggregate(issuesPipeline);
+    
+    // Count occurrences for repeats
+    const counts = {};
+    issuesResult.forEach(r => {
+      const key = `${r.bus_company}-${r.greatest_cause_of_delay}`;
+      counts[key] = (counts[key] || 0) + 1;
+    });
+    
+    const issues = issuesResult.map(r => {
+      const key = `${r.bus_company}-${r.greatest_cause_of_delay}`;
+      return {
+        id: r._id,
+        failedItem: r.greatest_cause_of_delay || 'System Issue',
+        operator: r.bus_company || 'Unknown',
+        area: r.area || 'Unknown',
+        date: r.assessment_date || 'Unknown',
+        assessor: r.assessor || 'Unknown',
+        status: 'open',
+        owner: r.section_c_remarks || 'IT Support',
+        isRepeat: counts[key] >= 2
+      };
+    });
     
     res.json(issues);
   } catch (error) {
     next(error);
   }
 };
-
-

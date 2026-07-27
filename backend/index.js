@@ -10,7 +10,7 @@ import assessmentRoutes from './routes/assessmentRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import errorHandler from './middlewares/errorHandler.js';
-import initDb from './seeds/initDb.js';
+import connectDB from './config/db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -51,12 +51,15 @@ app.use(errorHandler);
 // Initialize DB and start server (Only if not running on Vercel Serverless)
 if (process.env.NODE_ENV !== 'production' || process.env.RENDER) {
   const startServer = async () => {
-    await initDb();
+    await connectDB();
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
   };
   startServer();
+} else {
+  // For serverless environments like Vercel, connect independently
+  connectDB();
 }
 
 // Export for Vercel Serverless Functions

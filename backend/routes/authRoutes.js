@@ -2,9 +2,10 @@ import express from 'express';
 const router = express.Router();
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
-import pool from '../config/db.js';
 import nodemailer from 'nodemailer';
 import rateLimit from 'express-rate-limit';
+import User from '../models/User.js';
+import MagicLink from '../models/MagicLink.js';
 
 // Create a Nodemailer transporter using your exact configuration
 const transporter = nodemailer.createTransport({
@@ -33,23 +34,25 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
   }
 
   try {
-    const userResult = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-    if (userResult.rows.length === 0) {
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });
     }
 
-    const user = userResult.rows[0];
-
     // Invalidate old links for this user so only the newest works
-    await pool.query('UPDATE magic_links SET used = TRUE WHERE user_id = $1 AND used = FALSE', [user.id]);
+    await MagicLink.updateMany({ user_id: user._id, used: false }, { used: true });
 
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    await pool.query(
-      "INSERT INTO magic_links (user_id, token_hash, expires_at) VALUES ($1, $2, NOW() + INTERVAL '15 minutes')",
-      [user.id, tokenHash]
-    );
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+
+    await MagicLink.create({
+      user_id: user._id,
+      token_hash: tokenHash,
+      expires_at: expiresAt
+    });
 
     const frontendUrl = process.env.FRONTEND_URL || 'https://acm-audit.vercel.app';
     const magicLinkUrl = `${frontendUrl}/?token=${token}&email=${encodeURIComponent(email)}`;
@@ -103,29 +106,31 @@ router.post('/verify', async (req, res) => {
   const { email, token } = req.body;
 
   try {
-    const userResult = await pool.query('SELECT id, role FROM users WHERE email = $1', [email]);
-    if (userResult.rows.length === 0) {
+    const user = await User.findOne({ email });
+    if (!user) {
       return res.status(401).json({ error: 'Invalid or expired link' });
     }
-    const user = userResult.rows[0];
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
     
     // Ensure the link exists, is not expired, AND has not been used yet
-    const linkResult = await pool.query(
-      'SELECT id FROM magic_links WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW() AND used = FALSE',
-      [user.id, tokenHash]
-    );
+    const link = await MagicLink.findOne({
+      user_id: user._id,
+      token_hash: tokenHash,
+      expires_at: { $gt: new Date() },
+      used: false
+    });
 
-    if (linkResult.rows.length === 0) {
+    if (!link) {
       return res.status(401).json({ error: 'Invalid or expired link' });
     }
 
     // Mark the link as used so it cannot be used again
-    await pool.query('UPDATE magic_links SET used = TRUE WHERE id = $1', [linkResult.rows[0].id]);
+    link.used = true;
+    await link.save();
 
     const sessionToken = jwt.sign(
-      { userId: user.id, role: user.role },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET || 'supersecretacmobility',
       { expiresIn: '8h' }
     );
