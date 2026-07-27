@@ -212,14 +212,18 @@ function AssessmentForm() {
           )}
           
           {activeTab < tabs.length - 1 ? (
-            <button type="button" className="btn btn-primary ml-auto" onClick={(e) => {
-              // Prevent double clicks by temporarily disabling the button
-              e.currentTarget.disabled = true;
-              nextTab();
-              setTimeout(() => {
-                if (e.currentTarget) e.currentTarget.disabled = false;
-              }, 500);
-            }}>
+            <button 
+              type="button" 
+              className="btn btn-primary ml-auto" 
+              onClick={(e) => {
+                const btn = e.target;
+                btn.style.pointerEvents = 'none';
+                nextTab();
+                setTimeout(() => {
+                  btn.style.pointerEvents = 'auto';
+                }, 500);
+              }}
+            >
               Next Section
             </button>
           ) : (
