@@ -16,17 +16,19 @@ const seedAdmin = async () => {
     await mongoose.connect(process.env.DATABASE_URL);
     console.log('MongoDB Connected');
 
-    const adminEmail = 'b.ineza@alustudent.com';
+    const emails = ['b.ineza@alustudent.com', 'bonae@acgroup.rw'];
 
-    let user = await User.findOne({ email: adminEmail });
-    if (!user) {
-      user = await User.create({
-        email: adminEmail,
-        role: 'admin'
-      });
-      console.log(`Admin user ${adminEmail} created successfully!`);
-    } else {
-      console.log(`Admin user ${adminEmail} already exists.`);
+    for (const email of emails) {
+      let user = await User.findOne({ email });
+      if (!user) {
+        user = await User.create({
+          email,
+          role: 'admin'
+        });
+        console.log(`Admin user ${email} created successfully!`);
+      } else {
+        console.log(`Admin user ${email} already exists.`);
+      }
     }
 
     process.exit(0);

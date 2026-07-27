@@ -54,12 +54,17 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
       expires_at: expiresAt
     });
 
-    const frontendUrl = process.env.FRONTEND_URL || 'https://acm-audit.vercel.app';
+    const frontendUrl = process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? 'https://acm-audit.vercel.app' : 'http://localhost:5173');
     const magicLinkUrl = `${frontendUrl}/?token=${token}&email=${encodeURIComponent(email)}`;
     
     // Extract name from email (e.g. bonae@acgroup.rw -> Bonae)
     const namePart = email.split('@')[0];
     const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1).replace('.', ' ');
+
+    // ALWAYS print to terminal for easy local debugging!
+    console.log('\n==== MAGIC LINK GENERATED ====');
+    console.log(`URL: ${magicLinkUrl}`);
+    console.log('==============================\n');
 
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       await transporter.sendMail({
@@ -90,10 +95,6 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
           </div>
         `
       });
-    } else {
-      console.log('\n==== MAGIC LINK GENERATED ====');
-      console.log(`URL: ${magicLinkUrl}`);
-      console.log('==============================\n');
     }
 
     res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });

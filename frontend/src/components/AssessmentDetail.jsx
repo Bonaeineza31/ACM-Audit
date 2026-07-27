@@ -1,13 +1,13 @@
 import React from 'react';
 import './AssessmentDetail.css';
 
-const AssessmentDetail = ({ assessment, onBack }) => {
+const AssessmentDetail = ({ assessment, onClose }) => {
   if (!assessment) return null;
 
   return (
     <div className="animate-fade-in detail-page">
       <div className="detail-header-actions">
-        <button className="btn btn-secondary" onClick={onBack}>
+        <button className="btn btn-secondary" onClick={onClose}>
           &larr; Back to Assessment List
         </button>
       </div>

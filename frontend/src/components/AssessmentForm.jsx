@@ -47,15 +47,15 @@ function AssessmentForm() {
     
     // Map the human-readable frontend keys to the backend snake_case keys
     const mappedData = {
-      assessment_id: formData['Assessment ID'] || `ACM-AUDIT-${Math.floor(1000 + Math.random() * 9000)}`,
-      assessment_date: formData['Date'] || new Date().toISOString().split('T')[0],
-      assessment_time: formData['Time'] || new Date().toTimeString().split(' ')[0],
-      bus_company: formData['Bus Company / Sacco'],
-      area: formData['Area / Route'],
+      assessment_id: formData['Assessment ID'] || `ACM-AUDIT-${Math.floor(1000 + Math.random() * 9000)}`, // Backend overrides this now
+      assessment_date: formData['Assessment Date'] || new Date().toISOString().split('T')[0],
+      assessment_time: formData['Assessment Time'] || new Date().toTimeString().split(' ')[0],
+      bus_company: formData['Bus Company'],
+      area: formData['Area'],
       address: formData['Physical Address'],
       gps_lat: formData['GPS Coordinates (Lat)'],
       gps_lng: formData['GPS Coordinates (Lng)'],
-      assessor: formData['Name of Assessor'],
+      assessor: formData['Assessor'],
       weather_conditions: formData['Weather Conditions'],
       
       pos_powers_on: formData['POS device powers on?'],

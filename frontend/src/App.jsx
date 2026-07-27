@@ -144,7 +144,7 @@ function App() {
               </button>
             </div>
             {dashboardView === 'overview' ? (
-              <DashboardOverview onViewDetail={setSelectedAssessment} />
+              <DashboardOverview onViewDetail={setSelectedAssessment} onLogout={handleLogout} />
             ) : (
               <IssueRegister />
             )}

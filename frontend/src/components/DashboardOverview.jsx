@@ -3,7 +3,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import './DashboardOverview.css';
 import AssessmentList from './AssessmentList';
 
-const DashboardOverview = ({ onViewDetail }) => {
+const DashboardOverview = ({ onViewDetail, onLogout }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,8 +20,7 @@ const DashboardOverview = ({ onViewDetail }) => {
         credentials: 'include'
       });
       if (res.status === 401) {
-        localStorage.removeItem('isLoggedIn');
-        window.location.reload();
+        if (onLogout) onLogout();
         return;
       }
       if (!res.ok) throw new Error('Failed to fetch analytics');
