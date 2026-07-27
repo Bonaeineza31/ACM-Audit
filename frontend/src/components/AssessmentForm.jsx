@@ -112,7 +112,7 @@ function AssessmentForm() {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="form-content">
+      <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="form-content">
         <div className="tab-panels">
           {renderActiveSection()}
         </div>
