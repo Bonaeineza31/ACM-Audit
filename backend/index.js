@@ -28,6 +28,16 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// Ensure DB is connected before handling any API requests
+app.use('/api', async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // API Routes
 app.use('/api/assessments', assessmentRoutes);
 app.use('/api/auth', authRoutes);
@@ -50,9 +60,6 @@ if (process.env.NODE_ENV !== 'production' || process.env.RENDER) {
     });
   };
   startServer();
-} else {
-  // For serverless environments like Vercel, connect independently
-  connectDB();
 }
 
 // Export for Vercel Serverless Functions
