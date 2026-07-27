@@ -37,6 +37,11 @@ export const createAssessment = async (req, res, next) => {
 
 export const getAssessments = async (req, res, next) => {
   try {
+    // Prevent Vercel from caching the response
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     const assessments = await AssessmentModel.findAll();
     
     // Privacy feature: Strip section F if user is Viewer

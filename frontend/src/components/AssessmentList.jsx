@@ -21,7 +21,11 @@ const AssessmentList = ({ onViewDetail }) => {
     try {
       setLoading(true);
       const res = await fetch('/api/assessments', {
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
       });
       if (res.status === 401 || res.status === 403) {
         window.location.reload();
