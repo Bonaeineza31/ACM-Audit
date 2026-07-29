@@ -105,6 +105,12 @@ const assessmentSchema = new mongoose.Schema({
 
 }, { timestamps: true, strict: false });
 
+// Indexes for Dashboard performance (under 5s load time)
+assessmentSchema.index({ createdAt: -1 });
+assessmentSchema.index({ bus_company: 1, createdAt: -1 });
+assessmentSchema.index({ area: 1 });
+assessmentSchema.index({ assessment_date: -1 });
+
 // Support finding all easily
 assessmentSchema.statics.findAll = function() {
   return this.find().sort({ createdAt: -1 });

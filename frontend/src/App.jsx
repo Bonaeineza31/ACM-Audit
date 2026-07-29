@@ -16,6 +16,7 @@ function App() {
   // The actual security is the HttpOnly cookie, this is just a UI flag
   const [authToken, setAuthToken] = useState(localStorage.getItem('isLoggedIn') === 'true');
   const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail') || '');
+  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || '');
   const [verifying, setVerifying] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -41,8 +42,10 @@ function App() {
       if (res.ok) {
         setAuthToken(true);
         setUserEmail(data.email || email);
+        setUserRole(data.role || '');
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('userEmail', data.email || email);
+        localStorage.setItem('userRole', data.role || '');
         setCurrentView('viewData');
         // Clean URL
         window.history.replaceState({}, document.title, '/');
@@ -67,8 +70,10 @@ function App() {
     } catch(e) {}
     setAuthToken(false);
     setUserEmail('');
+    setUserRole('');
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('userEmail');
+    localStorage.removeItem('userRole');
     handleNavigate('landing');
   };
 
@@ -165,9 +170,11 @@ function App() {
               Select an option below to start a new field assessment or view past reports.
             </p>
             <div className="landing-actions">
-              <button className="btn btn-primary btn-large" onClick={() => setCurrentView('auditForm')}>
-                Start Auditing
-              </button>
+              {userRole !== 'Viewer' && (
+                <button className="btn btn-primary btn-large" onClick={() => setCurrentView('auditForm')}>
+                  Start Auditing
+                </button>
+              )}
               <button className="btn btn-secondary btn-large" onClick={() => setCurrentView('viewData')}>
                 View Data
               </button>
