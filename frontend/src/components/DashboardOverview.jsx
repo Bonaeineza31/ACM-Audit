@@ -96,14 +96,14 @@ const DashboardOverview = ({ onViewDetail, onLogout }) => {
             </div>
             <div className="kpi-card glass-container">
               <h3>Assessments</h3>
-              <div className="kpi-value">{data.kpis.assessments.value}</div>
+              <div className="kpi-value">{data.kpis.assessments.value.toLocaleString()}</div>
               <div className={`kpi-trend ${data.kpis.assessments.trend >= 0 ? 'trend-up' : 'trend-down'}`}>
                 {data.kpis.assessments.trend >= 0 ? '↑' : '↓'} {Math.abs(data.kpis.assessments.trend)}%
               </div>
             </div>
             <div className="kpi-card glass-container">
               <h3>Revenue-Risk Incidents</h3>
-              <div className="kpi-value text-danger">{data.kpis.revenueRiskIncidents.value}</div>
+              <div className="kpi-value text-danger">{data.kpis.revenueRiskIncidents.value.toLocaleString()}</div>
               <div className={`kpi-trend ${data.kpis.revenueRiskIncidents.trend <= 0 ? 'trend-up' : 'trend-down'}`}>
                 {data.kpis.revenueRiskIncidents.trend <= 0 ? '↓' : '↑'} {Math.abs(data.kpis.revenueRiskIncidents.trend)}%
               </div>
@@ -137,8 +137,8 @@ const DashboardOverview = ({ onViewDetail, onLogout }) => {
                 <BarChart data={data.charts.incidentsByOperator}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="operator" />
-                  <YAxis />
-                  <Tooltip />
+                  <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                  <Tooltip formatter={(value) => value.toLocaleString()} />
                   <Bar dataKey="incidents" fill="#EF4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -164,12 +164,12 @@ const DashboardOverview = ({ onViewDetail, onLogout }) => {
                   {data.operatorComparison.map((op, idx) => (
                     <tr key={idx}>
                       <td>{op.operator}</td>
-                      <td>{op.assessmentCount}</td>
+                      <td>{op.assessmentCount.toLocaleString()}</td>
                       <td className={op.adoption < 75 ? 'text-danger' : ''}>{op.adoption}%</td>
                       <td className={op.healthScore < 80 ? 'text-danger' : ''}>{op.healthScore}</td>
                       <td className={op.passRate < 90 ? 'text-danger' : ''}>{op.passRate}%</td>
                       <td>{op.avgTime}</td>
-                      <td className={op.incidentDensity > 3 ? 'text-danger' : ''}>{op.incidentDensity}</td>
+                      <td className={op.incidentDensity > 3 ? 'text-danger' : ''}>{Number(op.incidentDensity).toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
