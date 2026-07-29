@@ -19,6 +19,7 @@ const TextInput = ({ label, type = "text", value, onChange, placeholder, require
           placeholder={placeholder || `Enter ${label.toLowerCase()}...`}
           required={required}
           min={type === 'number' ? "0" : undefined}
+          max={type === 'number' ? "999999" : undefined}
         />
       )}
     </div>

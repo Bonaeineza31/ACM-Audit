@@ -188,14 +188,23 @@ function AssessmentForm() {
   };
 
   return (
-    <div className="glass-container assessment-form">
+    <form 
+      className="glass-container assessment-form" 
+      onSubmit={handleSubmit}
+      onKeyDown={handleKeyDown}
+    >
       <div className="tabs-navigation">
         {tabs.map((tab, index) => (
           <button 
             key={index}
             type="button"
             className={`tab-btn ${activeTab === index ? 'active' : ''}`}
-            onClick={() => setActiveTab(index)}
+            onClick={(e) => {
+              const form = e.target.closest('form');
+              // Only allow jumping tabs if the current tab is valid
+              if (form && !form.reportValidity()) return;
+              setActiveTab(index);
+            }}
           >
             <span className="tab-number">{index + 1}</span>
             <span className="tab-label">{tab}</span>
@@ -203,7 +212,7 @@ function AssessmentForm() {
         ))}
       </div>
 
-      <div className="form-content" onKeyDown={handleKeyDown}>
+      <div className="form-content">
         <div className="tab-panels">
           {renderActiveSection()}
         </div>
@@ -220,10 +229,15 @@ function AssessmentForm() {
               type="button" 
               className="btn btn-primary ml-auto" 
               onClick={(e) => {
+                const form = e.target.closest('form');
+                if (form && !form.reportValidity()) {
+                  // This triggers the native browser error bubble!
+                  return; 
+                }
+                
                 const btn = e.target;
                 btn.style.pointerEvents = 'none';
                 nextTab();
-                // When we reach the final tab, disable submit for 1 second to prevent double-tap
                 setTimeout(() => {
                   if (btn) btn.style.pointerEvents = 'auto';
                 }, 1000);
@@ -233,16 +247,9 @@ function AssessmentForm() {
             </button>
           ) : (
             <button 
-              type="button" 
+              type="submit" 
               className="btn btn-primary ml-auto submit-btn" 
               disabled={isSubmitting}
-              onClick={(e) => {
-                // Check if they just changed to this tab a split second ago
-                if (window.lastTabChangeTime && Date.now() - window.lastTabChangeTime < 1000) {
-                  return;
-                }
-                handleSubmit(e);
-              }}
             >
               {isSubmitting ? 'Submitting...' : 'Submit Assessment'}
             </button>
@@ -258,7 +265,7 @@ function AssessmentForm() {
           </div>
         )}
       </div>
-    </div>
+    </form>
   );
 }
 
