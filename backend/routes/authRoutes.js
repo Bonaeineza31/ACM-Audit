@@ -19,11 +19,14 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Rate limiting for Magic Links (max 5 requests per hour per IP)
+import TokenBlacklist from '../models/TokenBlacklist.js';
+
+// Rate limiting for Magic Links (max 5 requests per hour per email/IP)
 const magicLinkLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, 
   max: 5,
-  message: { error: 'Too many requests from this IP, please try again after an hour' }
+  message: { error: 'Too many requests, please try again after an hour' },
+  keyGenerator: (req) => req.body.email || req.ip
 });
 
 router.post('/magic-link', magicLinkLimiter, async (req, res) => {
@@ -34,10 +37,10 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
   }
 
   try {
-    let user = await User.findOne({ email });
+    const user = await User.findOne({ email });
     if (!user) {
-      // Auto-register any valid @acgroup.rw or @acmobility.com email as a Viewer
-      user = await User.create({ email, role: 'Viewer' });
+      // PRD strict rule: Unknown email produces identical response and sends nothing
+      return res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });
     }
 
     // Invalidate old links for this user so only the newest works
@@ -134,24 +137,40 @@ router.post('/verify', async (req, res) => {
     const sessionToken = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET || 'supersecretacmobility',
-      { expiresIn: '8h' }
+      { expiresIn: '7d' }
     );
 
     res.cookie('acm_session', sessionToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 8 * 60 * 60 * 1000 // 8 hours
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
-    res.status(200).json({ message: 'Authentication successful', role: user.role });
+    res.status(200).json({ message: 'Authentication successful', role: user.role, email: user.email });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+  const token = req.cookies?.acm_session;
+  
+  if (token) {
+    try {
+      const decoded = jwt.decode(token);
+      if (decoded && decoded.exp) {
+        await TokenBlacklist.create({
+          token,
+          expiresAt: new Date(decoded.exp * 1000)
+        });
+      }
+    } catch (e) {
+      console.error('Error blacklisting token on logout', e);
+    }
+  }
+  
   res.clearCookie('acm_session');
   res.status(200).json({ message: 'Logged out successfully' });
 });

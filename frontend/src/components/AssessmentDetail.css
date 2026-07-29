@@ -62,3 +62,67 @@
   font-size: 1.1rem;
   word-break: break-word;
 }
+
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Hide the rest of the application so only this component prints */
+  body * {
+    visibility: hidden;
+  }
+  
+  .print-container, .print-container * {
+    visibility: visible;
+  }
+  
+  .print-container {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block;
+    margin-bottom: 2rem;
+  }
+
+  .print-header h2 {
+    color: black !important;
+    font-size: 24px;
+    margin-bottom: 5px;
+  }
+
+  .print-header p {
+    margin: 2px 0;
+    color: #333;
+    font-size: 12px;
+  }
+
+  .detail-card {
+    break-inside: avoid;
+    border: 1px solid #ddd;
+    background: transparent;
+    padding: 10px;
+  }
+  
+  .details-grid-full {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  /* Reset colors for printer-friendly output */
+  .detail-header h2, .detail-card .detail-label, .detail-card .detail-value {
+    color: black !important;
+  }
+}

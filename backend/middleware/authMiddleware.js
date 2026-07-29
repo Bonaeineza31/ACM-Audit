@@ -1,6 +1,8 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+import TokenBlacklist from '../models/TokenBlacklist.js';
+
 export const requireAuth = async (req, res, next) => {
   const token = req.cookies?.acm_session;
   
@@ -9,6 +11,12 @@ export const requireAuth = async (req, res, next) => {
   }
 
   try {
+    // Check if token is blacklisted (server-side invalidation)
+    const blacklisted = await TokenBlacklist.findOne({ token });
+    if (blacklisted) {
+      return res.status(401).json({ error: 'Unauthorized: Session invalidated' });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'supersecretacmobility');
     const user = await User.findById(decoded.userId).select('-__v');
     

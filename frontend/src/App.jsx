@@ -15,6 +15,7 @@ function App() {
   
   // The actual security is the HttpOnly cookie, this is just a UI flag
   const [authToken, setAuthToken] = useState(localStorage.getItem('isLoggedIn') === 'true');
+  const [userEmail, setUserEmail] = useState(localStorage.getItem('userEmail') || '');
   const [verifying, setVerifying] = useState(false);
   const [authError, setAuthError] = useState('');
 
@@ -39,7 +40,9 @@ function App() {
       const data = await res.json();
       if (res.ok) {
         setAuthToken(true);
+        setUserEmail(data.email || email);
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('userEmail', data.email || email);
         setCurrentView('viewData');
         // Clean URL
         window.history.replaceState({}, document.title, '/');
@@ -63,7 +66,9 @@ function App() {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch(e) {}
     setAuthToken(false);
+    setUserEmail('');
     localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('userEmail');
     handleNavigate('landing');
   };
 
@@ -112,6 +117,7 @@ function App() {
               <AssessmentDetail 
                 assessment={selectedAssessment} 
                 onClose={() => setSelectedAssessment(null)}
+                userEmail={userEmail}
               />
             </div>
           );
@@ -144,9 +150,9 @@ function App() {
               </button>
             </div>
             {dashboardView === 'overview' ? (
-              <DashboardOverview onViewDetail={setSelectedAssessment} onLogout={handleLogout} />
+              <DashboardOverview onViewDetail={setSelectedAssessment} onLogout={handleLogout} userEmail={userEmail} />
             ) : (
-              <IssueRegister />
+              <IssueRegister userEmail={userEmail} />
             )}
           </div>
         );

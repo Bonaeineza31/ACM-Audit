@@ -3,7 +3,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, L
 import './DashboardOverview.css';
 import AssessmentList from './AssessmentList';
 
-const DashboardOverview = ({ onViewDetail, onLogout }) => {
+const DashboardOverview = ({ onViewDetail, onLogout, userEmail }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -181,7 +181,7 @@ const DashboardOverview = ({ onViewDetail, onLogout }) => {
       
       <div className="mt-4">
         <h3 className="mb-3">All Assessments</h3>
-        <AssessmentList onViewDetail={onViewDetail} />
+        <AssessmentList onViewDetail={onViewDetail} userEmail={userEmail} />
       </div>
     </div>
   );
