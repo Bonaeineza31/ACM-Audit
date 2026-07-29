@@ -34,9 +34,10 @@ router.post('/magic-link', magicLinkLimiter, async (req, res) => {
   }
 
   try {
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
     if (!user) {
-      return res.status(200).json({ message: 'If that address is registered, a sign-in link is on its way.' });
+      // Auto-register any valid @acgroup.rw or @acmobility.com email as a Viewer
+      user = await User.create({ email, role: 'Viewer' });
     }
 
     // Invalidate old links for this user so only the newest works
