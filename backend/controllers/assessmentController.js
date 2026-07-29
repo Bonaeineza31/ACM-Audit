@@ -33,7 +33,7 @@ export const getAssessments = async (req, res, next) => {
     // Privacy feature: Strip section F if user is Viewer
     if (req.user && req.user.role === 'Viewer') {
       const sanitized = assessments.map(a => {
-        const copy = { ...a };
+        const copy = a.toObject();
         delete copy.pos_issues_today;
         delete copy.unsuccessful_transactions;
         delete copy.network_interruption_freq;
